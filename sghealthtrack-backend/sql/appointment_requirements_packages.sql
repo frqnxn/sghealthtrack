@@ -1,0 +1,21 @@
+-- Add package-based fields to appointment_requirements
+alter table public.appointment_requirements
+  add column if not exists exam_physical boolean default false,
+  add column if not exists exam_visual_acuity boolean default false,
+  add column if not exists exam_height_weight boolean default false,
+  add column if not exists lab_cbc_platelet boolean default false,
+  add column if not exists lab_urinalysis boolean default false,
+  add column if not exists lab_fecalysis boolean default false,
+  add column if not exists lab_blood_typing boolean default false,
+  add column if not exists lab_pregnancy_test boolean default false,
+  add column if not exists lab_drug_test boolean default false,
+  add column if not exists lab_hepatitis_b boolean default false,
+  add column if not exists lab_hepatitis_a boolean default false,
+  add column if not exists lab_ecg boolean default false,
+  add column if not exists lab_audiometry boolean default false,
+  add column if not exists lab_salmonella boolean default false,
+  add column if not exists xray_chest boolean default false,
+  add column if not exists lab_custom_items jsonb default '[]'::jsonb,
+  add column if not exists lab_custom_total numeric,
+  add column if not exists xray_custom_items jsonb default '[]'::jsonb,
+  add column if not exists xray_custom_total numeric;
