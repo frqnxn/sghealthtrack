@@ -31,6 +31,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
 
   // patient info
   const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
   const [company, setCompany] = useState("");
   const [gender, setGender] = useState("");
@@ -78,7 +79,10 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
     const emailLower = email.trim().toLowerCase();
     setLoading(true);
 
-    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const fullName = [firstName, middleName, lastName]
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .join(" ");
     const meta = {
       role: "patient",
       full_name: fullName,
@@ -295,6 +299,15 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 placeholder="Juan"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Middle name (optional)</label>
+              <input
+                className="input"
+                placeholder="Santos"
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
               />
             </div>
             <div>
