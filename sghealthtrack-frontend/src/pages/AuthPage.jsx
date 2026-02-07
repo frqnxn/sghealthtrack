@@ -1,5 +1,6 @@
 // src/pages/AuthPage.jsx
 import { useState } from "react";
+import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
 
 export default function AuthPage({
   mode = "login", // "login" | "signup"
@@ -22,7 +23,7 @@ export default function AuthPage({
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-brand">
-          <img className="auth-logo" src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+          <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
           <div>
             <div className="auth-title">SG HealthTrack</div>
             <div className="auth-subtitle">Clinic Management System</div>

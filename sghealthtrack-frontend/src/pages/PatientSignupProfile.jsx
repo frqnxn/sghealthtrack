@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { normalizeCompanyName } from "../utils/companyPartners";
+import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
 
 const STAFF_DOMAIN = "@smartguys.com";
 const EMAIL_EXISTS_CODES = new Set([
@@ -193,7 +194,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
       <header className="auth-header">
         <div className="auth-container auth-header-inner">
           <div className="auth-nav-brand">
-            <img className="auth-nav-logo" src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+            <img className="auth-nav-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
             <div>
               <div className="auth-nav-title">SG HealthTrack</div>
               <div className="auth-nav-subtitle">Diagnostic & Preventive Care</div>
@@ -240,7 +241,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
           <div className="auth-section-card">
             <div className="auth-card auth-card--wide auth-card--flat">
           <div className="auth-brand">
-            <img className="auth-logo" src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+            <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
             <div>
               <div className="auth-title">SG HealthTrack</div>
               <div className="auth-subtitle">Clinic Management System</div>

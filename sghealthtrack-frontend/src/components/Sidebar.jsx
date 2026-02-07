@@ -1,6 +1,7 @@
 // Sidebar — single nav. Desktop: fixed. Mobile: drawer + hamburger.
 import { NavLink } from "react-router-dom";
 import { useEffect } from "react";
+import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
 
 const ROUTES = [
   { path: "/dashboard", label: "Dashboard" },
@@ -321,7 +322,7 @@ export default function Sidebar({ navItems = ROUTES, userName, userEmail, role, 
       >
         <div className="sidebar-brand">
           <div className="sidebar-logo">
-            <img src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+            <img src={sgHealthtrackLogo} alt="SG HealthTrack" />
           </div>
           <div className="sidebar-brand-text">
             <span className="sidebar-title">SG HealthTrack</span>

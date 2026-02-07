@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
+import sgHealthtrackLogo from "./image/sghealthtrack-logo.png";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardRoot from "./pages/DashboardRoot";
@@ -37,7 +38,7 @@ function LoginPage({ staffDomain = STAFF_DOMAIN, onLogin, onGoSignup, onForgotPa
       <header className="auth-header">
         <div className="auth-container auth-header-inner">
           <div className="auth-nav-brand">
-            <img className="auth-nav-logo" src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+            <img className="auth-nav-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
             <div>
               <div className="auth-nav-title">SG HealthTrack</div>
               <div className="auth-nav-subtitle">Diagnostic & Preventive Care</div>
@@ -84,7 +85,7 @@ function LoginPage({ staffDomain = STAFF_DOMAIN, onLogin, onGoSignup, onForgotPa
           <div className="auth-section-card">
             <div className="auth-card auth-card--wide auth-card--flat">
               <div className="auth-brand">
-                <img className="auth-logo" src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+                <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
                 <div>
                   <div className="auth-title">SG HealthTrack</div>
                   <div className="auth-subtitle">Clinic Management System</div>

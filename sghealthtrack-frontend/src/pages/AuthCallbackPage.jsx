@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
 
 function clean(v) {
   const s = typeof v === "string" ? v.trim() : "";
@@ -59,7 +60,7 @@ export default function AuthCallbackPage() {
       {status === "confirming" ? (
         <div className="auth-card" style={{ maxWidth: 400, textAlign: "center" }}>
           <div className="auth-brand" style={{ justifyContent: "center" }}>
-            <img className="auth-logo" src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+            <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
             <div>
               <div className="auth-title">SG HealthTrack</div>
               <div className="auth-subtitle">Medical Screening</div>
@@ -74,7 +75,7 @@ export default function AuthCallbackPage() {
         <div className="modal-overlay">
           <div className="modal-card" style={{ maxWidth: 420, textAlign: "center" }}>
             <div className="auth-brand" style={{ justifyContent: "center" }}>
-              <img className="auth-logo" src="/src/image/sghealthtrack-logo.png" alt="SG HealthTrack" />
+              <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
               <div>
                 <div className="auth-title">SG HealthTrack</div>
                 <div className="auth-subtitle">Medical Screening</div>
