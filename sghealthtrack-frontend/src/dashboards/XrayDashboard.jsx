@@ -235,7 +235,6 @@ export default function XrayDashboard({ session }) {
         case_no,
         findings,
         remarks,
-        normal,
         status,
         updated_at,
         appointments:appointment_id ( patient_id )
