@@ -1612,6 +1612,8 @@ export default function AdminDashboard({ session, page = "appointments" }) {
     list = list.filter((a) => statusKey(a) !== "ready_for_triage");
     // Hide no-show records from history list
     list = list.filter((a) => (a.rejection_reason || "").toLowerCase() !== "no show");
+    // Hide rejected/canceled appointments from the admin list
+    list = list.filter((a) => !["rejected", "canceled"].includes(statusKey(a)));
 
     if (filter === "inbox") {
       list = list.filter((a) => statusKey(a) === "pending");
@@ -1918,8 +1920,6 @@ export default function AdminDashboard({ session, page = "appointments" }) {
               <option value="approved">Approved</option>
               <option value="awaiting_forms">Awaiting Forms</option>
               <option value="ready_for_triage">Ready for Screening</option>
-              <option value="rejected">Rejected</option>
-              <option value="canceled">Canceled</option>
               <option value="released">Released</option>
             </select>
 
