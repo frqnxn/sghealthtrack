@@ -227,16 +227,34 @@ export default function XrayDashboard({ session }) {
     setRecordsLoading(true);
     const { data, error } = await supabase
       .from("xray_results")
-      .select("appointment_id, patient_id, exam_date, case_no, findings, remarks, impression, normal, status, updated_at")
+      .select(
+        `
+        appointment_id,
+        patient_id,
+        exam_date,
+        case_no,
+        findings,
+        remarks,
+        impression,
+        normal,
+        status,
+        updated_at,
+        appointments:appointment_id ( patient_id )
+      `
+      )
       .order("updated_at", { ascending: false });
 
     if (error) {
       setRecords([]);
+      setMsg("Failed to load X-ray records: " + error.message);
       setRecordsLoading(false);
       return;
     }
 
-    const rows = data || [];
+    const rows = (data || []).map((row) => ({
+      ...row,
+      patient_id: row.patient_id || row.appointments?.patient_id || null,
+    }));
     setRecords(rows);
     await loadPatientInfo(rows.map((r) => r.patient_id));
     setRecordsLoading(false);
