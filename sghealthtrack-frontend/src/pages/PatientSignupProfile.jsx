@@ -292,32 +292,36 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
 
           {/* Patient info */}
           <div style={grid2}>
-            <div>
-              <label className="label">First name</label>
-              <input
-                className="input"
-                placeholder="Juan"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label">Middle name (optional)</label>
-              <input
-                className="input"
-                placeholder="Santos"
-                value={middleName}
-                onChange={(e) => setMiddleName(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="label">Last name</label>
-              <input
-                className="input"
-                placeholder="Dela Cruz"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ ...grid3, marginTop: 0 }}>
+                <div>
+                  <label className="label">First name</label>
+                  <input
+                    className="input"
+                    placeholder="Juan"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label">Middle name (optional)</label>
+                  <input
+                    className="input"
+                    placeholder="Santos"
+                    value={middleName}
+                    onChange={(e) => setMiddleName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="label">Last name</label>
+                  <input
+                    className="input"
+                    placeholder="Dela Cruz"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
