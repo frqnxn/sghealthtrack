@@ -1350,7 +1350,7 @@ export default function AdminDashboard({ session, page = "appointments" }) {
     loadLogs();
     loadPatients();
 
-    setMsg(`Updated appointment to "${workflow_status}".`);
+    setMsg(`Updated appointment to "${formatWorkflowLabel(workflow_status)}".`);
   }
 
   async function confirmApproveFromModal() {
