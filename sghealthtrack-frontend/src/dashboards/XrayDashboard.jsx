@@ -235,7 +235,6 @@ export default function XrayDashboard({ session }) {
         case_no,
         findings,
         remarks,
-        impression,
         normal,
         status,
         updated_at,
