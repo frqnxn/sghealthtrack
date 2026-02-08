@@ -412,6 +412,10 @@ export default function DoctorDashboard({ session }) {
   const [loadingQueue, setLoadingQueue] = useState(false);
   const [loadingCase, setLoadingCase] = useState(false);
 
+  const [tab, setTab] = useState("queue"); // queue | records
+  const [records, setRecords] = useState([]);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+
   const [queue, setQueue] = useState([]);
   const [patientNameMap, setPatientNameMap] = useState({});
   const [doctorProfile, setDoctorProfile] = useState(null);
@@ -547,6 +551,60 @@ export default function DoctorDashboard({ session }) {
     setLoadingQueue(false);
   }
 
+  async function loadRecords() {
+    if (!userId) {
+      setRecords([]);
+      return;
+    }
+    setRecordsLoading(true);
+    setMsg("");
+
+    const { data, error } = await supabase
+      .from("doctor_reports")
+      .select(
+        `
+        appointment_id,
+        patient_id,
+        report_date,
+        report_status,
+        status,
+        evaluation,
+        remarks,
+        recommendations,
+        company,
+        updated_at,
+        appointments:appointment_id (
+          patient_id,
+          appointment_type,
+          preferred_date,
+          company_name,
+          company
+        )
+      `
+      )
+      .eq("doctor_id", userId)
+      .eq("report_status", "released")
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      setRecords([]);
+      setMsg("Failed to load doctor records: " + error.message);
+      setRecordsLoading(false);
+      return;
+    }
+
+    const rows = (data || []).map((row) => ({
+      ...row,
+      patient_id: row.patient_id || row.appointments?.patient_id || null,
+      appointment_type: row.appointments?.appointment_type || "",
+      preferred_date: row.appointments?.preferred_date || "",
+      company_name: row.appointments?.company_name || row.appointments?.company || row.company || "",
+    }));
+    setRecords(rows);
+    await loadPatientNames(rows.map((x) => x.patient_id));
+    setRecordsLoading(false);
+  }
+
   useEffect(() => {
     loadQueue();
 
@@ -559,11 +617,17 @@ export default function DoctorDashboard({ session }) {
       }, 300);
     };
 
+    const scheduleRecordsRefresh = () => {
+      if (tab !== "records") return;
+      loadRecords();
+    };
+
     const ch = supabase
       .channel("doctor-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "appointment_steps" }, scheduleQueueRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "lab_results" }, scheduleQueueRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "xray_results" }, scheduleQueueRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "doctor_reports" }, scheduleRecordsRefresh)
       .subscribe();
 
     return () => {
@@ -573,7 +637,7 @@ export default function DoctorDashboard({ session }) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
     async function loadDoctorProfile() {
@@ -940,6 +1004,9 @@ export default function DoctorDashboard({ session }) {
       if (stErr) throw stErr;
 
       setMsg("Medical report released. Patient can download and book again.");
+      if (tab === "records") {
+        await loadRecords();
+      }
     } catch (e) {
       setMsg("Release failed: " + (e?.message || e));
     } finally {
@@ -989,6 +1056,74 @@ export default function DoctorDashboard({ session }) {
           {msg ? <Card style={{ marginBottom: 12, borderColor: "rgba(20,184,166,0.25)" }}>{msg}</Card> : null}
 
           <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <SecondaryButton
+                onClick={() => setTab("queue")}
+                disabled={tab === "queue"}
+              >
+                Queue
+              </SecondaryButton>
+              <SecondaryButton
+                onClick={() => {
+                  setTab("records");
+                  loadRecords();
+                }}
+                disabled={tab === "records"}
+              >
+                Records
+              </SecondaryButton>
+            </div>
+
+            {tab === "records" ? (
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                  <div style={{ fontWeight: 900, color: "#0f172a" }}>Doctor Records</div>
+                  <div style={{ fontSize: 12, color: "rgba(15,23,42,0.70)" }}>{records.length} record(s)</div>
+                </div>
+
+                <div style={{ marginTop: 12, overflowX: "auto" }}>
+                  <table className="clinic-table">
+                    <thead>
+                      <tr>
+                        <th>Patient</th>
+                        <th>Company</th>
+                        <th>Type</th>
+                        <th>Appointment Date</th>
+                        <th>Report Date</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recordsLoading ? (
+                        <tr>
+                          <td colSpan={6} style={{ padding: 12, color: "rgba(15,23,42,0.70)" }}>
+                            Loading records...
+                          </td>
+                        </tr>
+                      ) : records.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ padding: 12, color: "rgba(15,23,42,0.70)" }}>
+                            No released records yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        records.map((r) => (
+                          <tr key={r.appointment_id}>
+                            <td style={{ fontWeight: 800 }}>{patientName(r.patient_id)}</td>
+                            <td>{r.company_name || "—"}</td>
+                            <td>{r.appointment_type || "—"}</td>
+                            <td>{r.preferred_date || "—"}</td>
+                            <td>{r.report_date || "—"}</td>
+                            <td>{r.report_status || r.status || "—"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ) : (
+              <>
             {/* Queue */}
             <Card>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
@@ -1405,6 +1540,8 @@ export default function DoctorDashboard({ session }) {
                 </>
               )}
             </Card>
+              </>
+            )}
           </div>
         </div>
       </div>
