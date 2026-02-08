@@ -577,7 +577,6 @@ export default function DoctorDashboard({ session }) {
           patient_id,
           appointment_type,
           preferred_date,
-          company_name,
           company
         )
       `
