@@ -576,8 +576,7 @@ export default function DoctorDashboard({ session }) {
         appointments:appointment_id (
           patient_id,
           appointment_type,
-          preferred_date,
-          company
+          preferred_date
         )
       `
       )
@@ -597,7 +596,7 @@ export default function DoctorDashboard({ session }) {
       patient_id: row.patient_id || row.appointments?.patient_id || null,
       appointment_type: row.appointments?.appointment_type || "",
       preferred_date: row.appointments?.preferred_date || "",
-      company_name: row.appointments?.company_name || row.appointments?.company || row.company || "",
+      company_name: row.company || "",
     }));
     setRecords(rows);
     await loadPatientNames(rows.map((x) => x.patient_id));
