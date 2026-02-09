@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
 import clinicHero from "../image/clinic.jpg";
+import labPhoto from "../image/laboratory.jpg";
+import imagingPhoto from "../image/digital.jpg";
+import consultPhoto from "../image/expert.jpg";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -82,7 +85,7 @@ export default function LandingPage() {
           </div>
           <div className="landing-shell landing-service-grid">
             <article className="landing-service-card">
-              <img src={clinicHero} alt="Laboratory services" />
+              <img src={labPhoto} alt="Laboratory services" />
               <div className="landing-service-body">
                 <div className="landing-service-icon">
                   <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -102,7 +105,7 @@ export default function LandingPage() {
               </div>
             </article>
             <article className="landing-service-card">
-              <img src={clinicHero} alt="Imaging services" />
+              <img src={imagingPhoto} alt="Imaging services" />
               <div className="landing-service-body">
                 <div className="landing-service-icon">
                   <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -131,7 +134,7 @@ export default function LandingPage() {
               </div>
             </article>
             <article className="landing-service-card">
-              <img src={clinicHero} alt="Consultation services" />
+              <img src={consultPhoto} alt="Consultation services" />
               <div className="landing-service-body">
                 <div className="landing-service-icon">
                   <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true">
