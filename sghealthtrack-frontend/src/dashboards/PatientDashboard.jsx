@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "../components/ToastCenter";
 import { supabase } from "../lib/supabase";
 import PatientProfile from "../pages/PatientProfile";
@@ -16,87 +17,31 @@ function Badge({ status }) {
   const s = raw === "released" ? "completed" : raw;
   const label = s === "completed" ? "Completed" : s === "in_progress" ? "In Progress" : "Pending";
 
-  const bg =
-    s === "completed"
-      ? "rgba(34,197,94,0.18)"
-      : s === "in_progress"
-      ? "rgba(234,179,8,0.18)"
-      : "rgba(148,163,184,0.14)";
-
-  const border =
-    s === "completed"
-      ? "rgba(34,197,94,0.35)"
-      : s === "in_progress"
-      ? "rgba(234,179,8,0.35)"
-      : "rgba(148,163,184,0.25)";
-
-  const color =
-    s === "completed"
-      ? "rgba(34,197,94,0.95)"
-      : s === "in_progress"
-      ? "rgba(234,179,8,0.95)"
-      : "rgba(148,163,184,0.95)";
-
-  return (
-    <span
-      style={{
-        padding: "4px 10px",
-        borderRadius: 999,
-        fontSize: 12,
-        border: `1px solid ${border}`,
-        background: bg,
-        color,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </span>
-  );
+  return <span className={`status-pill status-${s}`}>{label}</span>;
 }
 
 function StepCard({ number, title, status, subtitle, actions = [] }) {
   return (
-    <div className="card" style={{ padding: 14, borderRadius: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 999,
-              display: "grid",
-              placeItems: "center",
-              background: "rgba(13,180,170,0.1)",
-              border: "1px solid rgba(13,180,170,0.25)",
-              fontWeight: 700,
-              color: "#0f172a",
-            }}
-          >
-            {number}
+    <div className="card process-step-card">
+      <div className="process-step-head">
+        <div className="process-step-icon">{number}</div>
+        <div className="process-step-body">
+          <div className="process-step-title">
+            <b>{title}</b>
+            <Badge status={status} />
           </div>
-
-          <div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <b style={{ fontSize: 14 }}>{title}</b>
-              <Badge status={status} />
-            </div>
-            {subtitle && (
-              <div style={{ marginTop: 6, opacity: 0.8, fontSize: 13, lineHeight: 1.5 }}>
-                {subtitle}
-              </div>
-            )}
-          </div>
+          {subtitle && <div className="process-step-subtitle">{subtitle}</div>}
         </div>
       </div>
 
       {actions.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 8 }}>Required Actions:</div>
-          <div style={{ display: "grid", gap: 6 }}>
+        <div className="process-step-actions">
+          <div className="process-step-actions-label">Required Actions:</div>
+          <div className="process-step-actions-list">
             {actions.map((a, idx) => (
-              <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ opacity: a.done ? 1 : 0.5 }}>{a.done ? "✅" : "⭕"}</span>
-                <span style={{ opacity: a.done ? 0.9 : 0.75, fontSize: 13 }}>{a.label}</span>
+              <div key={idx} className={`process-step-action ${a.done ? "done" : ""}`}>
+                <span>{a.done ? "✅" : "⭕"}</span>
+                <span>{a.label}</span>
               </div>
             ))}
           </div>
@@ -233,58 +178,35 @@ function HealthProgressDashboard({ vitals }) {
   ];
 
   return (
-    <div className="card" style={{ marginTop: 16 }}>
-      <h4 style={{ marginTop: 0, marginBottom: 4 }}>Health Progress Dashboard</h4>
-      <p style={{ margin: 0, fontSize: 13, opacity: 0.8 }}>
-        Your vitals over time. Trend vs previous reading.
-      </p>
+    <div className="card patient-vitals-card">
+      <div className="section-header">
+        <div>
+          <h3 className="section-title">Health Progress Dashboard</h3>
+          <p className="section-subtitle">Your vitals over time. Trend vs previous reading.</p>
+        </div>
+      </div>
 
       {list.length === 0 ? (
-        <div className="clinic-empty" style={{ padding: 24 }}>
+        <div className="clinic-empty">
           <strong>No vitals yet</strong>
           Vitals will appear here after your nurse records them during an appointment.
         </div>
       ) : (
         <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-              gap: 12,
-              marginTop: 14,
-            }}
-          >
+          <div className="vitals-grid">
             {metrics.map((m) => (
-              <div
-                key={m.key}
-                style={{
-                  padding: 12,
-                  borderRadius: 12,
-                  border: "1px solid rgba(15,23,42,0.10)",
-                  background: "rgba(255,255,255,0.6)",
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.8, marginBottom: 4 }}>
-                  {m.label}
+              <div key={m.key} className="vitals-card">
+                <div className="vitals-label">{m.label}</div>
+                <div className="vitals-value">
+                  {m.key === "bp" ? m.formatter() : m.formatter(latest?.[m.key])}
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>
-                  {m.key === "bp"
-                    ? m.formatter()
-                    : m.formatter(latest?.[m.key])}
-                </div>
-                {m.trend && (
-                  <div style={{ fontSize: 11, opacity: 0.75, marginTop: 4 }}>
-                    vs last: {m.trend}
-                  </div>
-                )}
+                {m.trend && <div className="vitals-trend">vs last: {m.trend}</div>}
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: 16, overflowX: "auto" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.8, marginBottom: 8 }}>
-              Recent readings
-            </div>
+          <div className="vitals-table">
+            <div className="vitals-table-title">Recent Readings</div>
             <table className="clinic-table">
               <thead>
                 <tr>
@@ -308,7 +230,7 @@ function HealthProgressDashboard({ vitals }) {
                         : "—"}
                     </td>
                     <td>{v.temperature_c != null ? v.temperature_c : "—"}</td>
-                  <td>{getHeartRate(v) != null ? getHeartRate(v) : "—"}</td>
+                    <td>{getHeartRate(v) != null ? getHeartRate(v) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1282,6 +1204,7 @@ function canDownloadReport(stepsRow) {
 
 
 export default function PatientDashboard({ session, page = "dashboard" }) {
+  const navigate = useNavigate();
   const patientId = session?.user?.id;
   const [profile, setProfile] = useState(null);
 
@@ -1427,6 +1350,53 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
       fecalysis: feParts.join(" • ") || "—",
     };
   }, [latestLab]);
+
+  const upcomingSummary = useMemo(() => {
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const upcoming = appointments
+      .filter((a) => {
+        const status = String(a.status || "").toLowerCase();
+        if (["rejected", "cancelled", "canceled"].includes(status)) return false;
+        const dateStr = a.scheduled_at || a.preferred_date;
+        if (!dateStr) return false;
+        const dt = new Date(dateStr);
+        return Number.isFinite(dt.getTime()) && dt >= startOfToday;
+      })
+      .sort((a, b) => {
+        const aDt = new Date(a.scheduled_at || a.preferred_date);
+        const bDt = new Date(b.scheduled_at || b.preferred_date);
+        return aDt - bDt;
+      });
+    return { count: upcoming.length, next: upcoming[0] || null };
+  }, [appointments]);
+
+  const latestReportSummary = useMemo(() => {
+    const release = String(stepsRow?.release_status || "").toLowerCase();
+    if (release === "completed") return { label: "Normal", meta: "Report released" };
+    if (release === "in_progress") return { label: "In Review", meta: "Doctor reviewing" };
+    if (release) return { label: release.replace(/_/g, " "), meta: "Pending release" };
+    return { label: "Pending", meta: "No report yet" };
+  }, [stepsRow]);
+
+  const paymentSummary = useMemo(() => {
+    const totalPaid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    return {
+      totalPaid,
+      last: payments[0] || null,
+      outstanding: 0,
+    };
+  }, [payments]);
+
+  const labSummaryItems = useMemo(() => {
+    if (!latestLabSummary) return [];
+    const items = [
+      { label: "CBC", value: latestLabSummary.cbc },
+      { label: "Urinalysis", value: latestLabSummary.urinalysis },
+      { label: "Fecalysis", value: latestLabSummary.fecalysis },
+    ].filter((item) => item.value && item.value !== "—");
+    return items.slice(0, 2);
+  }, [latestLabSummary]);
 
   function hasLabValue(v) {
     return v !== null && v !== undefined && String(v).trim() !== "";
@@ -2895,7 +2865,13 @@ async function upsertFormSlipForAppointment(appointmentId) {
           <h1 className="page-title">{pageTitle()}</h1>
           {pageSubtitle() && <p className="page-subtitle">{pageSubtitle()}</p>}
         </div>
-        <div className="page-actions" />
+        <div className="page-actions">
+          {page === "dashboard" && (
+            <button className="btn btn-primary" type="button" onClick={() => navigate("/appointments")}>
+              Book Appointment
+            </button>
+          )}
+        </div>
       </header>
 
       {notifSupported && topbarActionsEl
@@ -2972,64 +2948,102 @@ async function upsertFormSlipForAppointment(appointmentId) {
         {/* DASHBOARD page: Health Progress (vitals) + Lab + Payment. No duplicate Latest Vitals. */}
         {page === "dashboard" && (
           <>
-            <div className="page-card-grid" style={{ marginTop: 16 }}>
-              <div className="card">
-                <b>Form Time</b>
-                <div style={{ marginTop: 8, fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                  Duration: <b>{formTimeSummary.label}</b>
-                  <div style={{ opacity: 0.75, fontSize: 13 }}>{formTimeSummary.status}</div>
+            <div className="summary-grid">
+              <div className="summary-card">
+                <div className="summary-icon">FT</div>
+                <div>
+                  <div className="summary-label">Form Time</div>
+                  <div className="summary-value">{formTimeSummary.label}</div>
+                  <div className="summary-meta">{formTimeSummary.status}</div>
                 </div>
               </div>
-              <div className="card">
-                <b>Medical Tests Time</b>
-                <div style={{ marginTop: 8, fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                  Duration: <b>{testsTimeSummary.label}</b>
-                  <div style={{ opacity: 0.75, fontSize: 13 }}>
-                    Progress: {testsTimeSummary.progress || "—"}
+              <div className="summary-card">
+                <div className="summary-icon">MT</div>
+                <div>
+                  <div className="summary-label">Medical Tests Time</div>
+                  <div className="summary-value">{testsTimeSummary.progress || "—"}</div>
+                  <div className="summary-meta">{testsTimeSummary.label}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon">AP</div>
+                <div>
+                  <div className="summary-label">Upcoming Appointments</div>
+                  <div className="summary-value">{upcomingSummary.count || 0}</div>
+                  <div className="summary-meta">
+                    Next: {upcomingSummary.next ? formatPreferred(upcomingSummary.next.scheduled_at || upcomingSummary.next.preferred_date) : "—"}
                   </div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon">LR</div>
+                <div>
+                  <div className="summary-label">Latest Report</div>
+                  <div className="summary-value">{latestReportSummary.label}</div>
+                  <div className="summary-meta">{latestReportSummary.meta}</div>
                 </div>
               </div>
             </div>
             <HealthProgressDashboard vitals={vitals} />
-            <div className="page-card-grid" style={{ marginTop: 16 }}>
+            <div className="dashboard-lower-grid">
               <div className="card">
-                <b>Lab Tests</b>
-                <div style={{ marginTop: 8, fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                  {latestLab ? (
-                    <>
-                      <div>CBC: {latestLabSummary?.cbc ?? "—"}</div>
-                      <div>Urinalysis: {latestLabSummary?.urinalysis ?? "—"}</div>
-                      <div>Fecalysis: {latestLabSummary?.fecalysis ?? "—"}</div>
-                      <div>Chest X-ray: {latestLab.chest_xray ?? "—"}</div>
-                      <div>Status: {latestLab.approval_status ?? "—"}</div>
-                      <div>Approved: {latestLab.approved_at ? new Date(latestLab.approved_at).toLocaleString() : "—"}</div>
-                      <div>Remarks: {latestLab.remarks ?? "—"}</div>
-                    </>
-                  ) : (
-                    "No lab results yet."
-                  )}
+                <div className="section-header">
+                  <div>
+                    <h4 className="section-title">Lab Tests Summary</h4>
+                    <p className="section-subtitle">Latest completed results</p>
+                  </div>
                 </div>
+                {labSummaryItems.length ? (
+                  <div className="summary-list">
+                    {labSummaryItems.map((item) => (
+                      <div key={item.label} className="summary-list-row">
+                        <div>
+                          <div className="summary-list-title">{item.label}</div>
+                          <div className="summary-list-meta">{latestLab?.recorded_at ? new Date(latestLab.recorded_at).toLocaleDateString() : "—"}</div>
+                        </div>
+                        <span className="status-pill status-completed">Ready</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="clinic-empty">No lab results yet.</div>
+                )}
               </div>
+
               <div className="card">
-                <b>Payment</b>
-                <div style={{ marginTop: 8, fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>
-                  {latestPayment ? (
-                    <>
-                      <div>Status: {latestPayment.payment_status}</div>
-                      <div>OR #: {latestPayment.or_number ?? "—"}</div>
-                      <div>Amount: {latestPayment.amount ?? "—"}</div>
-                    </>
-                  ) : (
-                    "No payment record yet."
-                  )}
+                <div className="section-header">
+                  <div>
+                    <h4 className="section-title">Payment Summary</h4>
+                    <p className="section-subtitle">Latest payment status</p>
+                  </div>
                 </div>
+                {paymentSummary.last ? (
+                  <div className="payment-summary">
+                    <div className="payment-summary-card">
+                      <div className="payment-label">Latest Payment Status</div>
+                      <div className="payment-value">{paymentSummary.last.payment_status || "—"}</div>
+                      <div className="payment-meta">
+                        {paymentSummary.last.recorded_at ? new Date(paymentSummary.last.recorded_at).toLocaleDateString() : "—"}
+                      </div>
+                    </div>
+                    <div className="payment-row">
+                      <span>Outstanding Balance</span>
+                      <strong>{paymentSummary.outstanding.toFixed(2)}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="clinic-empty">No payment record yet.</div>
+                )}
               </div>
+
               <div className="card">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                  <b>History Activity</b>
-                  <span className="text-muted text-sm">Latest</span>
+                <div className="section-header">
+                  <div>
+                    <h4 className="section-title">History Activity</h4>
+                    <p className="section-subtitle">Latest events</p>
+                  </div>
                 </div>
-                <div className="activity-list" style={{ marginTop: 8 }}>
+                <div className="activity-list">
                   {activityItems.length === 0 ? (
                     <div className="clinic-empty">No activity yet.</div>
                   ) : (
@@ -3078,8 +3092,8 @@ async function upsertFormSlipForAppointment(appointmentId) {
               </div>
             )}
 
-            <div className="appointment-grid">
-              <div className="card">
+            <div className="appointments-layout">
+              <div className="card appointment-calendar-card">
                 <div className="calendar-header">
                   <div>
                     <h4 style={{ margin: 0 }}>Appointment Calendar</h4>
@@ -3170,70 +3184,83 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   <span className="legend-item full">Fully booked</span>
                 </div>
               </div>
+              <div className="card no-print appointment-request-card">
+                <h4 style={{ marginTop: 0 }}>Request Appointment</h4>
 
-            </div>
-
-            <div className="card no-print">
-              <h4 style={{ marginTop: 0 }}>Request Appointment</h4>
-
-              {/* ✅ ADD: show patient name here too */}
-              <div style={{ marginBottom: 10, opacity: 0.85, fontSize: 13 }}>
-                Booking as: <b>{patientName()}</b>
-              </div>
-
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <select value={type} onChange={(e) => setType(e.target.value)} disabled={!canBook}>
-                  <option value="pre-employment">Pre-employment</option>
-                  <option value="ape">Annual Physical Exam (APE)</option>
-                </select>
-
-                <input
-                  type="date"
-                  value={preferredDate}
-                  onChange={(e) => setPreferredDate(e.target.value)}
-                  disabled={!canBook}
-                  min={dateKey(minDate)}
-                />
-
-                <input
-                  type="time"
-                  value={preferredTime}
-                  onChange={(e) => setPreferredTime(e.target.value)}
-                  disabled={!canBook}
-                  min={CLINIC_OPEN}
-                  max={CLINIC_CLOSE}
-                  step="60"
-                />
-
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => setFormSlipOpen(true)}
-                  disabled={!canBook}
-                >
-                  Fill Form Slip
-                </button>
-
-                <button
-                  onClick={requestAppointment}
-                  disabled={!canBook || !preferredDate || !preferredTime || !formSlipConfirmed}
-                >
-                  Submit
-                </button>
-              </div>
-
-              <div style={{ marginTop: 8, opacity: 0.75, fontSize: 13 }}>
-                Clinic hours: Monday–Saturday <b>7:00 AM – 3:00 PM</b>.
-              </div>
-
-              <div style={{ marginTop: 6, opacity: 0.75, fontSize: 13 }}>
-                Form Slip: <b>{formSlipConfirmed ? "Completed" : "Required before booking"}</b>
-              </div>
-
-              {!canBook && (
-                <div style={{ marginTop: 10, opacity: 0.8, fontSize: 13 }}>
-                  You can book again once your latest medical result is <b>Released</b>.
+                <div className="appointment-request-meta">
+                  Booking as: <b>{patientName()}</b>
                 </div>
-              )}
+
+                <div className="appointment-request-form">
+                  <div className="field-group">
+                    <label className="label">Appointment Type</label>
+                    <select value={type} onChange={(e) => setType(e.target.value)} disabled={!canBook}>
+                      <option value="pre-employment">Pre-employment</option>
+                      <option value="ape">Annual Physical Exam (APE)</option>
+                    </select>
+                  </div>
+
+                  <div className="field-row">
+                    <div className="field-group">
+                      <label className="label">Date</label>
+                      <input
+                        type="date"
+                        value={preferredDate}
+                        onChange={(e) => setPreferredDate(e.target.value)}
+                        disabled={!canBook}
+                        min={dateKey(minDate)}
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label className="label">Time</label>
+                      <input
+                        type="time"
+                        value={preferredTime}
+                        onChange={(e) => setPreferredTime(e.target.value)}
+                        disabled={!canBook}
+                        min={CLINIC_OPEN}
+                        max={CLINIC_CLOSE}
+                        step="60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="appointment-request-tip">
+                    Please fill up the form slip before submitting.
+                    <button
+                      className="btn btn-secondary"
+                      type="button"
+                      onClick={() => setFormSlipOpen(true)}
+                      disabled={!canBook}
+                    >
+                      Fill Form Slip
+                    </button>
+                  </div>
+
+                  <div className="appointment-request-hours">
+                    Clinic Hours: Mon-Sat 7:00 AM - 3:00 PM
+                  </div>
+
+                  <button
+                    className="btn btn-primary appointment-submit"
+                    type="button"
+                    onClick={requestAppointment}
+                    disabled={!canBook || !preferredDate || !preferredTime || !formSlipConfirmed}
+                  >
+                    Submit Appointment Request
+                  </button>
+                </div>
+
+                <div className="appointment-request-footer">
+                  Form Slip: <b>{formSlipConfirmed ? "Completed" : "Required before booking"}</b>
+                </div>
+
+                {!canBook && (
+                  <div className="appointment-request-lock">
+                    You can book again once your latest medical result is <b>Released</b>.
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="card">
@@ -3262,6 +3289,14 @@ async function upsertFormSlipForAppointment(appointmentId) {
                       appointments.map((a) => {
                         const s = String(a.status || "").toLowerCase();
                         const canCancel = !["rejected", "cancelled", "canceled", "released"].includes(s);
+                        const statusLabel =
+                          s === "approved" ? "Approved" : s === "completed" ? "Completed" : s === "rejected" ? "Rejected" : s;
+                        const statusTone =
+                          s === "approved" || s === "completed"
+                            ? "completed"
+                            : s === "pending" || s === "in_progress"
+                              ? "in_progress"
+                              : "pending";
                         return (
                           <tr key={a.id}>
                           {/* ✅ Patient Name FIRST */}
@@ -3272,7 +3307,7 @@ async function upsertFormSlipForAppointment(appointmentId) {
                           <td data-label="Type">{a.appointment_type}</td>
                           <td data-label="Appointment Date">{formatPreferred(a.preferred_date)}</td>
                           <td data-label="Status">
-                            <b>{a.status}</b>
+                            <span className={`status-pill status-${statusTone}`}>{statusLabel}</span>
                           </td>
                           <td data-label="Rejection Reason">{a.status === "rejected" ? a.rejection_reason || "—" : "—"}</td>
                           <td data-label="Action" style={{ textAlign: "right" }}>
@@ -3383,7 +3418,18 @@ async function upsertFormSlipForAppointment(appointmentId) {
         {/* LAB TESTS page */}
         {page === "labs" && (
           <div className="card" style={{ marginTop: 14 }}>
-            <h4 style={{ marginTop: 0 }}>Lab Tests History</h4>
+            <div className="section-header section-header-row">
+              <div>
+                <h3 className="section-title">Lab Tests History</h3>
+                <p className="section-subtitle">Review previous lab results and remarks.</p>
+              </div>
+              <div className="table-actions">
+                <div className="table-search">
+                  <input className="input" placeholder="Search tests..." />
+                </div>
+                <button className="btn btn-secondary" type="button">Filters</button>
+              </div>
+            </div>
             <div className="lab-history-legend">
               <span>Date</span>
               <span>Appointment</span>
@@ -3400,12 +3446,13 @@ async function upsertFormSlipForAppointment(appointmentId) {
                     <th>Tests Taken</th>
                     <th>Results</th>
                     <th>Remarks</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {labs.length === 0 ? (
                     <tr className="table-empty-row">
-                      <td colSpan={5} style={{ opacity: 0.7 }}>
+                      <td colSpan={6} style={{ opacity: 0.7 }}>
                         No lab results yet.
                       </td>
                     </tr>
@@ -3497,6 +3544,11 @@ async function upsertFormSlipForAppointment(appointmentId) {
                             )}
                           </td>
                           <td data-label="Remarks">{lab.remarks ?? "—"}</td>
+                          <td data-label="Action" style={{ textAlign: "right" }}>
+                            <button className="btn btn-secondary" onClick={() => downloadLabSummary(lab)}>
+                              PDF
+                            </button>
+                          </td>
                         </tr>
                       );
                     })
@@ -3510,17 +3562,27 @@ async function upsertFormSlipForAppointment(appointmentId) {
         {/* XRAY RESULTS page */}
         {page === "xray" && (
           <div className="card" style={{ marginTop: 14 }}>
-            <h4 style={{ marginTop: 0 }}>X-ray Results History</h4>
+            <div className="section-header section-header-row">
+              <div>
+                <h3 className="section-title">X-ray Results History</h3>
+                <p className="section-subtitle">View radiology findings and download reports.</p>
+              </div>
+              <div className="table-actions">
+                <div className="table-search">
+                  <input className="input" placeholder="Search records..." />
+                </div>
+                <button className="btn btn-secondary" type="button">Filters</button>
+              </div>
+            </div>
             <div style={{ overflowX: "auto" }}>
               <table className="table lab-history-table">
                 <thead>
                   <tr>
-                    <th>Patient Name</th>
-                    <th>Company</th>
+                    <th>Date</th>
                     <th>Examination</th>
                     <th>Radiology Findings</th>
                     <th>Impression</th>
-                    <th />
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3534,16 +3596,15 @@ async function upsertFormSlipForAppointment(appointmentId) {
                     xrayResults.map((x) => {
                       return (
                         <tr key={x.id}>
-                          <td data-label="Patient Name">
-                            <b>{patientName()}</b>
+                          <td data-label="Date">
+                            {x.recorded_at ? new Date(x.recorded_at).toLocaleDateString() : "—"}
                           </td>
-                          <td data-label="Company">{profile?.company || "—"}</td>
-                          <td data-label="Examination">—</td>
+                          <td data-label="Examination">{x.exam_type || "Chest PA"}</td>
                           <td data-label="Radiology Findings">{x.findings || "—"}</td>
                           <td data-label="Impression">{x.impression || x.remarks || "—"}</td>
                           <td data-label="Download" style={{ textAlign: "right" }}>
                             <button className="btn btn-secondary" onClick={() => downloadXraySummary(x)}>
-                              Download PDF
+                              PDF
                             </button>
                           </td>
                         </tr>
@@ -3632,107 +3693,187 @@ async function upsertFormSlipForAppointment(appointmentId) {
 
         {/* PAYMENTS page */}
         {page === "payments" && (
-          <div className="card" style={{ marginTop: 14 }}>
-            <h4 style={{ marginTop: 0 }}>Payments History</h4>
-            <div style={{ overflowX: "auto" }}>
-              <table className="table payments-history-table">
-                <thead>
-                  <tr>
-                    {/* ✅ ADD: Patient Name FIRST */}
-                    <th>Patient Name</th>
-                    <th>Date</th>
-                    <th>Appointment</th>
-                    <th>Status</th>
-                    <th>OR #</th>
-                    <th>Amount</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.length === 0 ? (
-                    <tr>
-                      <td colSpan="7" style={{ opacity: 0.7 }}>
-                        No payment records yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    payments.map((p) => {
-                      const appt = appointmentById.get(p.appointment_id);
-                      return (
-                        <tr key={p.id}>
-                          {/* ✅ Patient Name FIRST */}
-                          <td data-label="Patient Name">
-                            <b>{patientName()}</b>
-                          </td>
-
-                          <td data-label="Date">{new Date(p.recorded_at).toLocaleString()}</td>
-                          <td data-label="Appointment">{appt ? appt.appointment_type : p.appointment_id}</td>
-                          <td data-label="Status">
-                            <b>{p.payment_status}</b>
-                          </td>
-                          <td data-label="OR #">{p.or_number ?? "—"}</td>
-                          <td data-label="Amount">{p.amount ?? "—"}</td>
-                          <td data-label="Notes">{p.notes ?? "—"}</td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+          <>
+            <div className="summary-grid summary-grid-3">
+              <div className="summary-card">
+                <div className="summary-icon">OB</div>
+                <div>
+                  <div className="summary-label">Outstanding Balance</div>
+                  <div className="summary-value">{paymentSummary.outstanding.toFixed(2)}</div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon">LP</div>
+                <div>
+                  <div className="summary-label">Last Payment</div>
+                  <div className="summary-value">
+                    {paymentSummary.last?.amount != null ? paymentSummary.last.amount : "—"}
+                  </div>
+                  <div className="summary-meta">
+                    {paymentSummary.last?.recorded_at ? new Date(paymentSummary.last.recorded_at).toLocaleDateString() : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="summary-card">
+                <div className="summary-icon">TP</div>
+                <div>
+                  <div className="summary-label">Total Paid (YTD)</div>
+                  <div className="summary-value">{paymentSummary.totalPaid.toFixed(2)}</div>
+                </div>
+              </div>
             </div>
-          </div>
+
+            <div className="card" style={{ marginTop: 14 }}>
+              <div className="section-header section-header-row">
+                <div>
+                  <h3 className="section-title">Payments History</h3>
+                  <p className="section-subtitle">Track your payment status and receipts.</p>
+                </div>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table className="table payments-history-table">
+                  <thead>
+                    <tr>
+                      <th>Patient Name</th>
+                      <th>Date</th>
+                      <th>Appointment</th>
+                      <th>Status</th>
+                      <th>OR #</th>
+                      <th>Amount</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" style={{ opacity: 0.7 }}>
+                          No payment records yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      payments.map((p) => {
+                        const appt = appointmentById.get(p.appointment_id);
+                        const paymentStatus = String(p.payment_status || "").toLowerCase();
+                        const paymentTone = paymentStatus === "paid" ? "completed" : "pending";
+                        return (
+                          <tr key={p.id}>
+                            <td data-label="Patient Name">
+                              <b>{patientName()}</b>
+                            </td>
+                            <td data-label="Date">{new Date(p.recorded_at).toLocaleString()}</td>
+                            <td data-label="Appointment">{appt ? appt.appointment_type : p.appointment_id}</td>
+                            <td data-label="Status">
+                              <span className={`status-pill status-${paymentTone}`}>{p.payment_status}</span>
+                            </td>
+                            <td data-label="OR #">{p.or_number ?? "—"}</td>
+                            <td data-label="Amount">{p.amount ?? "—"}</td>
+                            <td data-label="Notes">{p.notes ?? "—"}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
-                {/* MEDICAL RECORDS page */}
+        {/* MEDICAL RECORDS page */}
         {page === "records" && (
           <div className="card" style={{ marginTop: 14 }}>
-            <h4 style={{ marginTop: 0 }}>Medical Records</h4>
+            <div className="section-header">
+              <div>
+                <h3 className="section-title">Medical Records</h3>
+                <p className="section-subtitle">Download your released reports and summaries.</p>
+              </div>
+            </div>
 
             {!stepsRow ? (
               <p style={{ opacity: 0.7 }}>No confirmed appointment yet.</p>
             ) : (
               <>
-                <div style={{ marginBottom: 10, opacity: 0.85, lineHeight: 1.6 }}>
-                  Patient: <b>{patientName()}</b>
-                  <br />
-                  Appointment: <b>{activeApprovedAppt?.appointment_type ?? "—"}</b>
-                  <br />
-                  Appointment Date: <b>{formatPreferred(activeApprovedAppt?.preferred_date ?? "—")}</b>
-                  <br />
-                  Release Status: <b>{stepsRow?.release_status ?? "—"}</b>
-                  <br />
-                  Release Date:{" "}
-                  <b>
-                    {stepsRow?.release_status === "completed" ? formatPreferred(stepsRow?.updated_at) : "—"}
-                  </b>
+                <div className="records-summary">
+                  <div>
+                    <div className="records-label">Patient</div>
+                    <div className="records-value">{patientName()}</div>
+                  </div>
+                  <div>
+                    <div className="records-label">Appointment</div>
+                    <div className="records-value">{activeApprovedAppt?.appointment_type ?? "—"}</div>
+                  </div>
+                  <div>
+                    <div className="records-label">Date</div>
+                    <div className="records-value">{formatPreferred(activeApprovedAppt?.preferred_date ?? "—")}</div>
+                  </div>
+                  <div>
+                    <div className="records-label">Release Status</div>
+                    <div className="records-value">
+                      {(() => {
+                        const releaseRaw = String(stepsRow?.release_status || "").toLowerCase();
+                        const releaseTone =
+                          releaseRaw === "completed"
+                            ? "completed"
+                            : releaseRaw === "in_progress"
+                              ? "in_progress"
+                              : "pending";
+                        return (
+                          <span className={`status-pill status-${releaseTone}`}>
+                            {stepsRow?.release_status ?? "—"}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="records-label">Release Date</div>
+                    <div className="records-value">
+                      {stepsRow?.release_status === "completed" ? formatPreferred(stepsRow?.updated_at) : "—"}
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button onClick={downloadReport} disabled={!canDownloadReport(stepsRow)}>
-                    Download Medical Examination Report (PDF)
+                <div className="records-downloads">
+                  <button
+                    className="records-download-card"
+                    onClick={downloadReport}
+                    disabled={!canDownloadReport(stepsRow)}
+                  >
+                    <div className="records-download-title">Medical Exam Report</div>
+                    <div className="records-download-meta">Download PDF</div>
                   </button>
-                  {latestLab ? (
-                    <button className="btn btn-secondary" onClick={() => downloadLabSummary(latestLab)}>
-                      Download Lab Tests Summary (PDF)
-                    </button>
-                  ) : null}
-                  {xrayResults[0] ? (
-                    <button className="btn btn-secondary" onClick={() => downloadXraySummary(xrayResults[0])}>
-                      Download X-ray Summary (PDF)
-                    </button>
-                  ) : null}
+                  <button
+                    className="records-download-card"
+                    onClick={() => latestLab && downloadLabSummary(latestLab)}
+                    disabled={!latestLab}
+                  >
+                    <div className="records-download-title">Lab Tests Summary</div>
+                    <div className="records-download-meta">Download PDF</div>
+                  </button>
+                  <button
+                    className="records-download-card"
+                    onClick={() => xrayResults[0] && downloadXraySummary(xrayResults[0])}
+                    disabled={!xrayResults[0]}
+                  >
+                    <div className="records-download-title">X-ray Summary</div>
+                    <div className="records-download-meta">Download PDF</div>
+                  </button>
                 </div>
 
                 {!canDownloadReport(stepsRow) && (
-                  <div style={{ marginTop: 8, fontSize: 13, opacity: 0.7 }}>
+                  <div className="records-note">
                     The medical report will be available once the doctor has reviewed and released it.
                   </div>
                 )}
 
-                <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+                <div className="records-tables">
                   <div className="card">
-                    <b>Lab Tests Summary History</b>
-                    <div style={{ marginTop: 8, overflowX: "auto" }}>
+                    <div className="section-header">
+                      <div>
+                        <h4 className="section-title">Lab Tests Summary History</h4>
+                      </div>
+                    </div>
+                    <div style={{ overflowX: "auto" }}>
                       <table className="table lab-history-table">
                         <thead>
                           <tr>
@@ -3753,13 +3894,13 @@ async function upsertFormSlipForAppointment(appointmentId) {
                           ) : (
                             labs.map((l) => {
                               const appt = appointmentById.get(l.appointment_id);
+                              const summary = summarizeLabForHistory(l);
                               return (
                                 <tr key={l.id}>
                                   <td data-label="Date">{new Date(l.recorded_at).toLocaleString()}</td>
                                   <td data-label="Appointment">{appt ? appt.appointment_type : l.appointment_id}</td>
                                   <td data-label="Results">
-                                    CBC {l.cbc_platelet ?? l.cbc ?? "—"} • UA {l.urinalysis ?? "—"} • Fecalysis{" "}
-                                    {l.fecalysis ?? "—"}
+                                    {summary.cbc || summary.urinalysis || summary.fecalysis || "—"}
                                   </td>
                                   <td data-label="Remarks">{l.remarks || "—"}</td>
                                   <td data-label="Download" style={{ textAlign: "right" }}>
@@ -3777,8 +3918,12 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   </div>
 
                   <div className="card">
-                    <b>X-ray Summary History</b>
-                    <div style={{ marginTop: 8, overflowX: "auto" }}>
+                    <div className="section-header">
+                      <div>
+                        <h4 className="section-title">X-ray Summary History</h4>
+                      </div>
+                    </div>
+                    <div style={{ overflowX: "auto" }}>
                       <table className="table lab-history-table">
                         <thead>
                           <tr>
@@ -3797,21 +3942,19 @@ async function upsertFormSlipForAppointment(appointmentId) {
                               </td>
                             </tr>
                           ) : (
-                            xrayResults.map((x) => {
-                              return (
-                                <tr key={x.id}>
-                                  <td data-label="Examination">—</td>
-                                  <td data-label="Findings">{x.findings || "—"}</td>
-                                  <td data-label="Impression">{x.impression || x.remarks || "—"}</td>
-                                  <td data-label="Remarks">{x.remarks || "—"}</td>
-                                  <td data-label="Download" style={{ textAlign: "right" }}>
-                                    <button className="btn btn-secondary" onClick={() => downloadXraySummary(x)}>
-                                      Download PDF
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })
+                            xrayResults.map((x) => (
+                              <tr key={x.id}>
+                                <td data-label="Examination">—</td>
+                                <td data-label="Findings">{x.findings || "—"}</td>
+                                <td data-label="Impression">{x.impression || x.remarks || "—"}</td>
+                                <td data-label="Remarks">{x.remarks || "—"}</td>
+                                <td data-label="Download" style={{ textAlign: "right" }}>
+                                  <button className="btn btn-secondary" onClick={() => downloadXraySummary(x)}>
+                                    Download PDF
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
                           )}
                         </tbody>
                       </table>

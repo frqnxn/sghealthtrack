@@ -435,8 +435,10 @@ export default function DoctorDashboard({ session }) {
   // doctor inputs
   const [report, setReport] = useState(EMPTY_REPORT);
   const [saving, setSaving] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
   const [latestVitals, setLatestVitals] = useState(null);
   const [triage, setTriage] = useState(null);
+  const formDisabled = saving || readOnly;
 
   const examiningPhysician = useMemo(() => formatExaminingPhysician(doctorProfile), [doctorProfile]);
 
@@ -653,7 +655,8 @@ export default function DoctorDashboard({ session }) {
 
   const filteredQueue = useMemo(() => queue, [queue]);
 
-  async function openCase(row) {
+  async function openCase(row, options = {}) {
+    setReadOnly(!!options.readOnly);
     setLoadingCase(true);
     setSelected(row);
     setMsg("");
@@ -1089,18 +1092,19 @@ export default function DoctorDashboard({ session }) {
                         <th>Appointment Date</th>
                         <th>Report Date</th>
                         <th>Status</th>
+                        <th />
                       </tr>
                     </thead>
                     <tbody>
                       {recordsLoading ? (
                         <tr>
-                          <td colSpan={6} style={{ padding: 12, color: "rgba(15,23,42,0.70)" }}>
+                          <td colSpan={7} style={{ padding: 12, color: "rgba(15,23,42,0.70)" }}>
                             Loading records...
                           </td>
                         </tr>
                       ) : records.length === 0 ? (
                         <tr>
-                          <td colSpan={6} style={{ padding: 12, color: "rgba(15,23,42,0.70)" }}>
+                          <td colSpan={7} style={{ padding: 12, color: "rgba(15,23,42,0.70)" }}>
                             No released records yet.
                           </td>
                         </tr>
@@ -1113,6 +1117,16 @@ export default function DoctorDashboard({ session }) {
                             <td>{r.preferred_date || "—"}</td>
                             <td>{r.report_date || "—"}</td>
                             <td>{r.report_status || r.status || "—"}</td>
+                            <td>
+                              <SecondaryButton
+                                onClick={() => {
+                                  setTab("queue");
+                                  openCase(r, { readOnly: true });
+                                }}
+                              >
+                                View
+                              </SecondaryButton>
+                            </td>
                           </tr>
                         ))
                       )}
@@ -1185,19 +1199,22 @@ export default function DoctorDashboard({ session }) {
               ) : (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                    <div style={{ fontWeight: 900, fontSize: 16 }}>Physical / Medical Examination Report</div>
+                    <div style={{ fontWeight: 900, fontSize: 16 }}>
+                      Physical / Medical Examination Report
+                      {readOnly ? <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.7 }}>(Read-only)</span> : null}
+                    </div>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                       <SecondaryButton onClick={downloadPdf}>Download PDF</SecondaryButton>
-                      <SecondaryButton onClick={saveDraft} disabled={saving}>
+                      <SecondaryButton onClick={saveDraft} disabled={formDisabled}>
                         {saving ? "Saving..." : "Save Draft"}
                       </SecondaryButton>
                       <SecondaryButton
                         onClick={releaseReport}
-                        disabled={saving || String(steps?.doctor_status || "").toLowerCase() !== "completed"}
+                        disabled={formDisabled || String(steps?.doctor_status || "").toLowerCase() !== "completed"}
                       >
                         {saving ? "Releasing..." : "Release Medical Report"}
                       </SecondaryButton>
-                      <PrimaryButton onClick={finalizeAndComplete} disabled={saving}>
+                      <PrimaryButton onClick={finalizeAndComplete} disabled={formDisabled}>
                         {saving ? "Saving..." : "Finalize & Mark Completed"}
                       </PrimaryButton>
                     </div>
@@ -1261,13 +1278,13 @@ export default function DoctorDashboard({ session }) {
                             value={report.health_history}
                             onChange={(e) => setReportField("health_history", e.target.value)}
                             rows={3}
-                            disabled={saving}
+                            disabled={formDisabled}
                           />
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8, marginTop: 10 }}>
                           {MEDICAL_HISTORY_ITEMS.map(([key, label]) => (
                             <label key={key} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
-                              <input type="checkbox" checked={!!report[key]} onChange={() => toggleReportField(key)} disabled={saving} />
+                              <input type="checkbox" checked={!!report[key]} onChange={() => toggleReportField(key)} disabled={formDisabled} />
                               {label}
                             </label>
                           ))}
@@ -1279,26 +1296,26 @@ export default function DoctorDashboard({ session }) {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
                           <div>
                             <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                              <input type="checkbox" checked={!!report.smoker} onChange={() => toggleReportField("smoker")} disabled={saving} />
+                              <input type="checkbox" checked={!!report.smoker} onChange={() => toggleReportField("smoker")} disabled={formDisabled} />
                               Smoker
                             </label>
                             <Input
                               value={report.packs_per_day}
                               onChange={(e) => setReportField("packs_per_day", e.target.value)}
                               placeholder="No. of packs/day"
-                              disabled={saving}
+                              disabled={formDisabled}
                             />
                           </div>
                           <div>
                             <label style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                              <input type="checkbox" checked={!!report.alcohol_drinker} onChange={() => toggleReportField("alcohol_drinker")} disabled={saving} />
+                              <input type="checkbox" checked={!!report.alcohol_drinker} onChange={() => toggleReportField("alcohol_drinker")} disabled={formDisabled} />
                               Alcohol drinker
                             </label>
                             <Input
                               value={report.alcohol_years}
                               onChange={(e) => setReportField("alcohol_years", e.target.value)}
                               placeholder="No. of years"
-                              disabled={saving}
+                              disabled={formDisabled}
                             />
                           </div>
                         </div>
@@ -1306,19 +1323,19 @@ export default function DoctorDashboard({ session }) {
 
                       <div>
                         <b>Present Illness</b>
-                        <Textarea value={report.present_illness} onChange={(e) => setReportField("present_illness", e.target.value)} rows={3} disabled={saving} />
+                        <Textarea value={report.present_illness} onChange={(e) => setReportField("present_illness", e.target.value)} rows={3} disabled={formDisabled} />
                       </div>
                       <div>
                         <b>Medication (previously and presently taking)</b>
-                        <Textarea value={report.medications} onChange={(e) => setReportField("medications", e.target.value)} rows={3} disabled={saving} />
+                        <Textarea value={report.medications} onChange={(e) => setReportField("medications", e.target.value)} rows={3} disabled={formDisabled} />
                       </div>
                       <div>
                         <b>Allergies (food, medicines, environmental, etc.)</b>
-                        <Textarea value={report.allergies_notes} onChange={(e) => setReportField("allergies_notes", e.target.value)} rows={3} disabled={saving} />
+                        <Textarea value={report.allergies_notes} onChange={(e) => setReportField("allergies_notes", e.target.value)} rows={3} disabled={formDisabled} />
                       </div>
                       <div>
                         <b>Operation / Hospitalization</b>
-                        <Textarea value={report.operations} onChange={(e) => setReportField("operations", e.target.value)} rows={3} disabled={saving} />
+                        <Textarea value={report.operations} onChange={(e) => setReportField("operations", e.target.value)} rows={3} disabled={formDisabled} />
                       </div>
 
                       <div>
@@ -1327,7 +1344,7 @@ export default function DoctorDashboard({ session }) {
                           {PHYSICAL_EXAM_FIELDS.map(([key, label]) => (
                             <div key={key}>
                               <Label>{label}</Label>
-                              <Input value={report[key]} onChange={(e) => setReportField(key, e.target.value)} disabled={saving} />
+                              <Input value={report[key]} onChange={(e) => setReportField(key, e.target.value)} disabled={formDisabled} />
                             </div>
                           ))}
                         </div>
@@ -1339,33 +1356,33 @@ export default function DoctorDashboard({ session }) {
                           <div>
                             <Label>BP (mmHg)</Label>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                              <Input value={report.bp_systolic} onChange={(e) => setReportField("bp_systolic", e.target.value)} placeholder="Systolic" disabled={saving} />
-                              <Input value={report.bp_diastolic} onChange={(e) => setReportField("bp_diastolic", e.target.value)} placeholder="Diastolic" disabled={saving} />
+                              <Input value={report.bp_systolic} onChange={(e) => setReportField("bp_systolic", e.target.value)} placeholder="Systolic" disabled={formDisabled} />
+                              <Input value={report.bp_diastolic} onChange={(e) => setReportField("bp_diastolic", e.target.value)} placeholder="Diastolic" disabled={formDisabled} />
                             </div>
                           </div>
                           <div>
                             <Label>PR (bpm)</Label>
-                            <Input value={report.pr} onChange={(e) => setReportField("pr", e.target.value)} disabled={saving} />
+                            <Input value={report.pr} onChange={(e) => setReportField("pr", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>RR (/min)</Label>
-                            <Input value={report.rr} onChange={(e) => setReportField("rr", e.target.value)} disabled={saving} />
+                            <Input value={report.rr} onChange={(e) => setReportField("rr", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Temp (°C)</Label>
-                            <Input value={report.temp_c} onChange={(e) => setReportField("temp_c", e.target.value)} disabled={saving} />
+                            <Input value={report.temp_c} onChange={(e) => setReportField("temp_c", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Height (ft)</Label>
-                            <Input value={report.height_ft} onChange={(e) => setReportField("height_ft", e.target.value)} disabled={saving} />
+                            <Input value={report.height_ft} onChange={(e) => setReportField("height_ft", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Height (inch)</Label>
-                            <Input value={report.height_in} onChange={(e) => setReportField("height_in", e.target.value)} disabled={saving} />
+                            <Input value={report.height_in} onChange={(e) => setReportField("height_in", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Weight (lbs.)</Label>
-                            <Input value={report.weight_lbs} onChange={(e) => setReportField("weight_lbs", e.target.value)} disabled={saving} />
+                            <Input value={report.weight_lbs} onChange={(e) => setReportField("weight_lbs", e.target.value)} disabled={formDisabled} />
                           </div>
                         </div>
                       </div>
@@ -1385,21 +1402,21 @@ export default function DoctorDashboard({ session }) {
                             <tbody>
                               <tr>
                                 <td>W/o Glasses</td>
-                                <td><Input value={report.vision_wo_od} onChange={(e) => setReportField("vision_wo_od", e.target.value)} disabled={saving} /></td>
-                                <td><Input value={report.vision_wo_os} onChange={(e) => setReportField("vision_wo_os", e.target.value)} disabled={saving} /></td>
-                                <td><Input value={report.vision_wo_ou} onChange={(e) => setReportField("vision_wo_ou", e.target.value)} disabled={saving} /></td>
+                                <td><Input value={report.vision_wo_od} onChange={(e) => setReportField("vision_wo_od", e.target.value)} disabled={formDisabled} /></td>
+                                <td><Input value={report.vision_wo_os} onChange={(e) => setReportField("vision_wo_os", e.target.value)} disabled={formDisabled} /></td>
+                                <td><Input value={report.vision_wo_ou} onChange={(e) => setReportField("vision_wo_ou", e.target.value)} disabled={formDisabled} /></td>
                               </tr>
                               <tr>
                                 <td>W/ Glasses</td>
-                                <td><Input value={report.vision_w_od} onChange={(e) => setReportField("vision_w_od", e.target.value)} disabled={saving} /></td>
-                                <td><Input value={report.vision_w_os} onChange={(e) => setReportField("vision_w_os", e.target.value)} disabled={saving} /></td>
-                                <td><Input value={report.vision_w_ou} onChange={(e) => setReportField("vision_w_ou", e.target.value)} disabled={saving} /></td>
+                                <td><Input value={report.vision_w_od} onChange={(e) => setReportField("vision_w_od", e.target.value)} disabled={formDisabled} /></td>
+                                <td><Input value={report.vision_w_os} onChange={(e) => setReportField("vision_w_os", e.target.value)} disabled={formDisabled} /></td>
+                                <td><Input value={report.vision_w_ou} onChange={(e) => setReportField("vision_w_ou", e.target.value)} disabled={formDisabled} /></td>
                               </tr>
                               <tr>
                                 <td>Near</td>
-                                <td><Input value={report.vision_near_od} onChange={(e) => setReportField("vision_near_od", e.target.value)} disabled={saving} /></td>
-                                <td><Input value={report.vision_near_os} onChange={(e) => setReportField("vision_near_os", e.target.value)} disabled={saving} /></td>
-                                <td><Input value={report.vision_near_ou} onChange={(e) => setReportField("vision_near_ou", e.target.value)} disabled={saving} /></td>
+                                <td><Input value={report.vision_near_od} onChange={(e) => setReportField("vision_near_od", e.target.value)} disabled={formDisabled} /></td>
+                                <td><Input value={report.vision_near_os} onChange={(e) => setReportField("vision_near_os", e.target.value)} disabled={formDisabled} /></td>
+                                <td><Input value={report.vision_near_ou} onChange={(e) => setReportField("vision_near_ou", e.target.value)} disabled={formDisabled} /></td>
                               </tr>
                             </tbody>
                           </table>
@@ -1417,7 +1434,7 @@ export default function DoctorDashboard({ session }) {
                                 toggleReportField("ishihara_normal");
                                 setReportField("ishihara_defective", false);
                               }}
-                              disabled={saving}
+                              disabled={formDisabled}
                             />
                             Normal
                           </label>
@@ -1429,7 +1446,7 @@ export default function DoctorDashboard({ session }) {
                                 toggleReportField("ishihara_defective");
                                 setReportField("ishihara_normal", false);
                               }}
-                              disabled={saving}
+                              disabled={formDisabled}
                             />
                             Defective
                           </label>
@@ -1441,23 +1458,23 @@ export default function DoctorDashboard({ session }) {
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginTop: 8 }}>
                           <div>
                             <Label>LMP</Label>
-                            <Input value={report.ob_lmp} onChange={(e) => setReportField("ob_lmp", e.target.value)} disabled={saving} />
+                            <Input value={report.ob_lmp} onChange={(e) => setReportField("ob_lmp", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>OB Score</Label>
-                            <Input value={report.ob_score} onChange={(e) => setReportField("ob_score", e.target.value)} disabled={saving} />
+                            <Input value={report.ob_score} onChange={(e) => setReportField("ob_score", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Interval</Label>
-                            <Input value={report.ob_interval} onChange={(e) => setReportField("ob_interval", e.target.value)} disabled={saving} />
+                            <Input value={report.ob_interval} onChange={(e) => setReportField("ob_interval", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Duration</Label>
-                            <Input value={report.ob_duration} onChange={(e) => setReportField("ob_duration", e.target.value)} disabled={saving} />
+                            <Input value={report.ob_duration} onChange={(e) => setReportField("ob_duration", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Dysmenorrhea</Label>
-                            <Input value={report.ob_dysmenorrhea} onChange={(e) => setReportField("ob_dysmenorrhea", e.target.value)} disabled={saving} />
+                            <Input value={report.ob_dysmenorrhea} onChange={(e) => setReportField("ob_dysmenorrhea", e.target.value)} disabled={formDisabled} />
                           </div>
                         </div>
                       </div>
@@ -1467,23 +1484,23 @@ export default function DoctorDashboard({ session }) {
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginTop: 8 }}>
                           <div>
                             <Label>Oral Prophylaxis</Label>
-                            <Input value={report.dental_oral_prophylaxis} onChange={(e) => setReportField("dental_oral_prophylaxis", e.target.value)} disabled={saving} />
+                            <Input value={report.dental_oral_prophylaxis} onChange={(e) => setReportField("dental_oral_prophylaxis", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Fillings</Label>
-                            <Input value={report.dental_fillings} onChange={(e) => setReportField("dental_fillings", e.target.value)} disabled={saving} />
+                            <Input value={report.dental_fillings} onChange={(e) => setReportField("dental_fillings", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Extraction</Label>
-                            <Input value={report.dental_extraction} onChange={(e) => setReportField("dental_extraction", e.target.value)} disabled={saving} />
+                            <Input value={report.dental_extraction} onChange={(e) => setReportField("dental_extraction", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Others</Label>
-                            <Input value={report.dental_others} onChange={(e) => setReportField("dental_others", e.target.value)} disabled={saving} />
+                            <Input value={report.dental_others} onChange={(e) => setReportField("dental_others", e.target.value)} disabled={formDisabled} />
                           </div>
                           <div>
                             <Label>Attending Dentist</Label>
-                            <Input value={report.dental_attending} onChange={(e) => setReportField("dental_attending", e.target.value)} disabled={saving} />
+                            <Input value={report.dental_attending} onChange={(e) => setReportField("dental_attending", e.target.value)} disabled={formDisabled} />
                           </div>
                         </div>
                       </div>
@@ -1504,10 +1521,10 @@ export default function DoctorDashboard({ session }) {
                                 <tr key={resKey}>
                                   <td>{label}</td>
                                   <td>
-                                    <Input value={report[resKey]} onChange={(e) => setReportField(resKey, e.target.value)} disabled={saving} />
+                                    <Input value={report[resKey]} onChange={(e) => setReportField(resKey, e.target.value)} disabled={formDisabled} />
                                   </td>
                                   <td>
-                                    <Input value={report[findKey]} onChange={(e) => setReportField(findKey, e.target.value)} disabled={saving} />
+                                    <Input value={report[findKey]} onChange={(e) => setReportField(findKey, e.target.value)} disabled={formDisabled} />
                                   </td>
                                 </tr>
                               ))}
@@ -1518,15 +1535,15 @@ export default function DoctorDashboard({ session }) {
 
                       <div>
                         <b>Evaluations</b>
-                        <Textarea value={report.evaluation} onChange={(e) => setReportField("evaluation", e.target.value)} rows={4} disabled={saving} />
+                        <Textarea value={report.evaluation} onChange={(e) => setReportField("evaluation", e.target.value)} rows={4} disabled={formDisabled} />
                       </div>
                       <div>
                         <b>Remarks</b>
-                        <Textarea value={report.remarks} onChange={(e) => setReportField("remarks", e.target.value)} rows={4} disabled={saving} />
+                        <Textarea value={report.remarks} onChange={(e) => setReportField("remarks", e.target.value)} rows={4} disabled={formDisabled} />
                       </div>
                       <div>
                         <b>Recommendations</b>
-                        <Textarea value={report.recommendations} onChange={(e) => setReportField("recommendations", e.target.value)} rows={4} disabled={saving} />
+                        <Textarea value={report.recommendations} onChange={(e) => setReportField("recommendations", e.target.value)} rows={4} disabled={formDisabled} />
                       </div>
 
                       <div>
