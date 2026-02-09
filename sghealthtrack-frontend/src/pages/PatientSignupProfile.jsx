@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { normalizeCompanyName } from "../utils/companyPartners";
 import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
-import clinicHero from "../image/clinic-template.jpeg";
+import clinicHero from "../image/clinic.jpg";
 
 const STAFF_DOMAIN = "@smartguys.com";
 const EMAIL_EXISTS_CODES = new Set([

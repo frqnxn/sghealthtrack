@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
-import clinicHero from "../image/clinic-template.jpeg";
+import clinicHero from "../image/clinic.jpg";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -62,8 +62,8 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="landing-hero-media">
-              <img src={clinicHero} alt="Clinic reception" />
+              <div className="landing-hero-media">
+                <img src={clinicHero} alt="Clinic reception" />
               <div className="landing-hero-badge">
                 <div className="badge-icon">✓</div>
                 <div>
@@ -84,7 +84,18 @@ export default function LandingPage() {
             <article className="landing-service-card">
               <img src={clinicHero} alt="Laboratory services" />
               <div className="landing-service-body">
-                <div className="landing-service-icon">🧪</div>
+                <div className="landing-service-icon">
+                  <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M9 3v7.5L5.6 18a3 3 0 002.6 4h7.6a3 3 0 002.6-4L15 10.5V3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
                 <h3>Advanced Laboratory</h3>
                 <p>Complete blood work, biochemistry, and specialized pathology tests with rapid turnaround.</p>
                 <button className="landing-link-btn" type="button">Learn more →</button>
@@ -93,7 +104,27 @@ export default function LandingPage() {
             <article className="landing-service-card">
               <img src={clinicHero} alt="Imaging services" />
               <div className="landing-service-body">
-                <div className="landing-service-icon">🩻</div>
+                <div className="landing-service-icon">
+                  <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect
+                      x="4"
+                      y="5"
+                      width="16"
+                      height="14"
+                      rx="2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                    />
+                    <path
+                      d="M8 9h8M10 12h4M9 16h6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
                 <h3>Digital Imaging</h3>
                 <p>Low-dose digital X-rays, ultrasound, and ECG services performed by certified technicians.</p>
                 <button className="landing-link-btn" type="button">Learn more →</button>
@@ -102,7 +133,27 @@ export default function LandingPage() {
             <article className="landing-service-card">
               <img src={clinicHero} alt="Consultation services" />
               <div className="landing-service-body">
-                <div className="landing-service-icon">🩺</div>
+                <div className="landing-service-icon">
+                  <svg className="landing-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M6 7a4 4 0 008 0V4h2v3a6 6 0 01-12 0V4h2v3z"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M16 15h2a3 3 0 010 6h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="16" r="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                </div>
                 <h3>Expert Consultation</h3>
                 <p>Discuss your results immediately with our resident general physicians and specialists.</p>
                 <button className="landing-link-btn" type="button">Learn more →</button>
@@ -118,17 +169,43 @@ export default function LandingPage() {
           </div>
           <div className="landing-shell landing-steps-grid">
             <div className="landing-step">
-              <div className="landing-step-icon">🕒</div>
+              <div className="landing-step-icon">
+                <svg className="landing-step-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M12 8v5l3 2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </div>
               <h4>1. Book Appointment</h4>
               <p>Schedule online or walk in. We prioritize your time.</p>
             </div>
             <div className="landing-step">
-              <div className="landing-step-icon">🧬</div>
+              <div className="landing-step-icon">
+                <svg className="landing-step-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M7 7c3 0 7 10 10 10M17 7c-3 0-7 10-10 10M9 5h6M9 19h6"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
               <h4>2. Visit &amp; Test</h4>
               <p>Quick, hygienic sample collection and imaging.</p>
             </div>
             <div className="landing-step">
-              <div className="landing-step-icon">🛡️</div>
+              <div className="landing-step-icon">
+                <svg className="landing-step-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 4l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V7l7-3z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
               <h4>3. Get Results</h4>
               <p>Access reports online securely or pick them up.</p>
             </div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import sgHealthtrackLogo from "./image/sghealthtrack-logo.png";
-import clinicHero from "./image/clinic-template.jpeg";
+import clinicHero from "./image/clinic.jpg";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardRoot from "./pages/DashboardRoot";
