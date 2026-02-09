@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
 import clinicHero from "../image/clinic.jpg";
@@ -7,9 +8,50 @@ import consultPhoto from "../image/expert.jpg";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
+  useEffect(() => {
+    const acknowledged = localStorage.getItem("sghealthtrack_privacy_ack") === "true";
+    setShowPrivacy(!acknowledged);
+  }, []);
+
+  function acceptPrivacy() {
+    localStorage.setItem("sghealthtrack_privacy_ack", "true");
+    setShowPrivacy(false);
+  }
 
   return (
     <div className="landing-page">
+      {showPrivacy && (
+        <div className="privacy-overlay">
+          <div className="privacy-modal">
+            <div className="privacy-header">
+              <h3>Data Privacy Statement</h3>
+              <p>
+                Please review and accept our data privacy statement before continuing.
+              </p>
+            </div>
+            <div className="privacy-body">
+              <p>
+                SG HealthTrack collects personal and medical information to provide diagnostic
+                services, manage appointments, and deliver reports securely. We process data
+                only for legitimate clinical purposes, follow applicable privacy laws, and use
+                reasonable safeguards to protect your information.
+              </p>
+              <p>
+                By clicking “I Agree”, you consent to the collection, use, and storage of your
+                data for these purposes. You may request access, correction, or deletion of
+                your data by contacting the clinic.
+              </p>
+            </div>
+            <div className="privacy-actions">
+              <button className="landing-outline-btn" type="button" onClick={acceptPrivacy}>
+                I Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="landing-topbar">
         <div className="landing-shell landing-topbar-inner">
           <div className="landing-logo-wrap">
