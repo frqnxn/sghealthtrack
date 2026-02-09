@@ -9,10 +9,12 @@ import consultPhoto from "../image/expert.jpg";
 export default function LandingPage() {
   const navigate = useNavigate();
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
 
   useEffect(() => {
     const acknowledged = localStorage.getItem("sghealthtrack_privacy_ack") === "true";
     setShowPrivacy(!acknowledged);
+    setPrivacyChecked(false);
   }, []);
 
   function acceptPrivacy() {
@@ -44,8 +46,21 @@ export default function LandingPage() {
                 your data by contacting the clinic.
               </p>
             </div>
+            <label className="privacy-check">
+              <input
+                type="checkbox"
+                checked={privacyChecked}
+                onChange={(e) => setPrivacyChecked(e.target.checked)}
+              />
+              <span>I agree to the data privacy statement.</span>
+            </label>
             <div className="privacy-actions">
-              <button className="landing-outline-btn" type="button" onClick={acceptPrivacy}>
+              <button
+                className="landing-outline-btn"
+                type="button"
+                onClick={acceptPrivacy}
+                disabled={!privacyChecked}
+              >
                 I Agree
               </button>
             </div>
