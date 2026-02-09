@@ -15,6 +15,28 @@ import useSuccessToast from "../utils/useSuccessToast";
    ========================================================= */
 const PROFILE_TABLE = "profiles"; // expects: id, full_name
 const PATIENT_PROFILE_TABLE = "patient_profiles"; // expects: patient_id, contact_no, address, gender, age, civil_status
+const MIN_AGE = 1;
+const MAX_AGE = 120;
+
+function cleanContact(raw) {
+  return String(raw || "").replace(/[^\d+]/g, "");
+}
+
+function isValidContact(raw) {
+  const v = cleanContact(raw);
+  if (!v) return false;
+  if (v.startsWith("+63")) return /^\+63\d{10}$/.test(v);
+  if (v.startsWith("09")) return /^09\d{9}$/.test(v);
+  return /^\d{10,11}$/.test(v);
+}
+
+function validatePassword(value) {
+  if (!value || value.length < 8) return "Password must be at least 8 characters.";
+  if (!/[a-z]/.test(value)) return "Password must include a lowercase letter.";
+  if (!/[A-Z]/.test(value)) return "Password must include an uppercase letter.";
+  if (!/[0-9]/.test(value)) return "Password must include a number.";
+  return "";
+}
 const PATIENT_PROFILE_SOFT_DELETE_FIELD = "is_deleted";
 
 /* ---------------------------------------------------------
@@ -358,6 +380,14 @@ function PatientEditModal({ open, onClose, patientRow, onSave }) {
 
     try {
       const patient_id = patientRow.patient_id;
+      const ageNum = age === "" ? null : Number(age);
+
+      if (contactNo.trim() && !isValidContact(contactNo)) {
+        throw new Error("Contact no. must be a valid PH number (09XXXXXXXXX or +63XXXXXXXXXX).");
+      }
+      if (ageNum !== null && (!Number.isFinite(ageNum) || ageNum < MIN_AGE || ageNum > MAX_AGE)) {
+        throw new Error("Age must be between 1 and 120.");
+      }
 
       // Update profile name
       if (fullName.trim()) {
@@ -373,10 +403,10 @@ function PatientEditModal({ open, onClose, patientRow, onSave }) {
       // Upsert patient_profile fields
       const payload = {
         patient_id,
-        contact_no: contactNo.trim() || null,
+        contact_no: contactNo.trim() ? cleanContact(contactNo) : null,
         address: address.trim() || null,
         gender: gender.trim() || null,
-        age: age === "" ? null : Number(age),
+        age: ageNum,
         civil_status: civilStatus.trim() || null,
       };
 
@@ -423,7 +453,13 @@ function PatientEditModal({ open, onClose, patientRow, onSave }) {
             </div>
             <div>
               <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>Contact No</div>
-              <input value={contactNo} onChange={(e) => setContactNo(e.target.value)} style={{ width: "100%" }} />
+              <input
+                value={contactNo}
+                onChange={(e) => setContactNo(cleanContact(e.target.value))}
+                style={{ width: "100%" }}
+                inputMode="numeric"
+                maxLength={13}
+              />
             </div>
           </div>
 
@@ -442,9 +478,10 @@ function PatientEditModal({ open, onClose, patientRow, onSave }) {
               <input
                 type="number"
                 value={age}
-                onChange={(e) => setAge(e.target.value)}
+                onChange={(e) => setAge(e.target.value.replace(/[^\d]/g, ""))}
                 style={{ width: "100%" }}
-                min={0}
+                min={1}
+                max={120}
               />
             </div>
             <div>
@@ -1051,9 +1088,8 @@ export default function AdminDashboard({ session, page = "appointments" }) {
 
   async function changeAdminPassword() {
     setAdminPwMsg("");
-    if (!adminNewPassword || adminNewPassword.length < 6) {
-      return setAdminPwMsg("Password must be at least 6 characters.");
-    }
+    const passError = validatePassword(adminNewPassword);
+    if (passError) return setAdminPwMsg(passError);
     setAdminPwSaving(true);
     const { error } = await supabase.auth.updateUser({ password: adminNewPassword });
     setAdminPwSaving(false);
@@ -2432,9 +2468,10 @@ export default function AdminDashboard({ session, page = "appointments" }) {
                     <input
                       className="input"
                       type="password"
-                      placeholder="New password"
+                      placeholder="New password (min 8 chars)"
                       value={adminNewPassword}
                       onChange={(e) => setAdminNewPassword(e.target.value)}
+                      minLength={8}
                     />
                     <button className="btn btn-primary" onClick={changeAdminPassword} disabled={adminPwSaving}>
                       {adminPwSaving ? "Updating..." : "Update"}

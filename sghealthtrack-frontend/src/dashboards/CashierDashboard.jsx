@@ -32,6 +32,13 @@ function toNumOrNull(v) {
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
+function sanitizeAmountInput(value) {
+  const cleaned = String(value || "").replace(/[^\d.]/g, "");
+  return cleaned.replace(/(\..*)\./g, "$1");
+}
+function sanitizeRefInput(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9-]/g, "").trim();
+}
 const PACKAGE_PRICES = {
   A: 900,
   B: 1300,
@@ -478,7 +485,9 @@ export default function CashierDashboard({ session, page = "payments" }) {
 
     if (status === "completed") {
       if (!orNumber.trim()) return setMsg("OR Number is required when marking COMPLETED.");
+      if (orNumber.trim().length < 3) return setMsg("OR Number must be at least 3 characters.");
       if (amt === null || amt <= 0) return setMsg("Amount must be a positive number.");
+      if (amt > 1000000) return setMsg("Amount is too large. Please verify.");
     }
 
     const baseNotes = notes.trim();
@@ -899,7 +908,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
                     <input
                       className="input"
                       value={orNumber}
-                      onChange={(e) => setOrNumber(e.target.value)}
+                      onChange={(e) => setOrNumber(sanitizeRefInput(e.target.value))}
                       placeholder="e.g. OR-12345"
                       disabled={isLockedCompleted || status !== "completed"}
                     />
@@ -910,7 +919,8 @@ export default function CashierDashboard({ session, page = "payments" }) {
                     <input
                       className="input"
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      onChange={(e) => setAmount(sanitizeAmountInput(e.target.value))}
+                      inputMode="decimal"
                       placeholder="e.g. 500"
                       disabled={isLockedCompleted || status !== "completed"}
                     />
@@ -945,7 +955,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
                       <input
                         className="input"
                         value={gcashReference}
-                        onChange={(e) => setGcashReference(e.target.value)}
+                        onChange={(e) => setGcashReference(sanitizeRefInput(e.target.value))}
                         placeholder="e.g. GCash Ref #"
                         disabled={isLockedCompleted}
                       />

@@ -92,6 +92,26 @@ export default function NurseDashboard({ session }) {
   const [heartRate, setHeartRate] = useState("");
   const [tempC, setTempC] = useState("");
 
+  const VITAL_RANGES = {
+    height_cm: [50, 250],
+    weight_kg: [2, 300],
+    systolic: [70, 250],
+    diastolic: [40, 150],
+    heart_rate: [30, 220],
+    temperature_c: [30, 45],
+  };
+
+  function sanitizeNumberInput(value, allowDecimal) {
+    const cleaned = String(value || "").replace(/[^\d.]/g, "");
+    const normalized = allowDecimal ? cleaned.replace(/(\..*)\./g, "$1") : cleaned.replace(/\./g, "");
+    return normalized;
+  }
+
+  function withinRange(value, min, max) {
+    if (!Number.isFinite(value)) return false;
+    return value >= min && value <= max;
+  }
+
   async function loadPatientNames(ids) {
     const uniq = Array.from(new Set((ids || []).filter(Boolean)));
     if (!uniq.length) return;
@@ -427,16 +447,41 @@ export default function NurseDashboard({ session }) {
 
     setMsg("");
 
+    const heightVal = Number(heightCm);
+    const weightVal = Number(weightKg);
+    const sysVal = Number(systolic);
+    const diaVal = Number(diastolic);
+    const hrVal = Number(heartRate);
+    const tempVal = Number(tempC);
+
+    if (
+      !Number.isFinite(heightVal) ||
+      !Number.isFinite(weightVal) ||
+      !Number.isFinite(sysVal) ||
+      !Number.isFinite(diaVal) ||
+      !Number.isFinite(hrVal) ||
+      !Number.isFinite(tempVal)
+    ) {
+      return setMsg("All vitals are required and must be numbers.");
+    }
+
+    if (!withinRange(heightVal, ...VITAL_RANGES.height_cm)) return setMsg("Height must be 50-250 cm.");
+    if (!withinRange(weightVal, ...VITAL_RANGES.weight_kg)) return setMsg("Weight must be 2-300 kg.");
+    if (!withinRange(sysVal, ...VITAL_RANGES.systolic)) return setMsg("Systolic must be 70-250.");
+    if (!withinRange(diaVal, ...VITAL_RANGES.diastolic)) return setMsg("Diastolic must be 40-150.");
+    if (!withinRange(hrVal, ...VITAL_RANGES.heart_rate)) return setMsg("Heart rate must be 30-220.");
+    if (!withinRange(tempVal, ...VITAL_RANGES.temperature_c)) return setMsg("Temperature must be 30-45 °C.");
+
     const payload = {
       appointment_id: selected.appointment_id,
       patient_id: selected.patient_id,
       recorded_by: nurseId,
-      height_cm: heightCm === "" ? null : Number(heightCm),
-      weight_kg: weightKg === "" ? null : Number(weightKg),
-      systolic: systolic === "" ? null : Number(systolic),
-      diastolic: diastolic === "" ? null : Number(diastolic),
-      heart_rate: heartRate === "" ? null : Number(heartRate),
-      temperature_c: tempC === "" ? null : Number(tempC),
+      height_cm: heightVal,
+      weight_kg: weightVal,
+      systolic: sysVal,
+      diastolic: diaVal,
+      heart_rate: hrVal,
+      temperature_c: tempVal,
     };
 
     const { error: vitErr } = await supabase.from("vitals").insert(payload);
@@ -781,12 +826,54 @@ export default function NurseDashboard({ session }) {
                 {!paid && <div style={{ opacity: 0.7, marginTop: 10 }}>Payment not completed — inputs disabled.</div>}
 
                 <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(2, minmax(120px, 1fr))", gap: 10 }}>
-                  <input className="input" placeholder="Height (cm)" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} disabled={!paid} />
-                  <input className="input" placeholder="Weight (kg)" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} disabled={!paid} />
-                  <input className="input" placeholder="Systolic" value={systolic} onChange={(e) => setSystolic(e.target.value)} disabled={!paid} />
-                  <input className="input" placeholder="Diastolic" value={diastolic} onChange={(e) => setDiastolic(e.target.value)} disabled={!paid} />
-                  <input className="input" placeholder="Heart Rate" value={heartRate} onChange={(e) => setHeartRate(e.target.value)} disabled={!paid} />
-                  <input className="input" placeholder="Temp (°C)" value={tempC} onChange={(e) => setTempC(e.target.value)} disabled={!paid} />
+                  <input
+                    className="input"
+                    placeholder="Height (cm)"
+                    value={heightCm}
+                    onChange={(e) => setHeightCm(sanitizeNumberInput(e.target.value, true))}
+                    inputMode="decimal"
+                    disabled={!paid}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Weight (kg)"
+                    value={weightKg}
+                    onChange={(e) => setWeightKg(sanitizeNumberInput(e.target.value, true))}
+                    inputMode="decimal"
+                    disabled={!paid}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Systolic"
+                    value={systolic}
+                    onChange={(e) => setSystolic(sanitizeNumberInput(e.target.value, false))}
+                    inputMode="numeric"
+                    disabled={!paid}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Diastolic"
+                    value={diastolic}
+                    onChange={(e) => setDiastolic(sanitizeNumberInput(e.target.value, false))}
+                    inputMode="numeric"
+                    disabled={!paid}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Heart Rate"
+                    value={heartRate}
+                    onChange={(e) => setHeartRate(sanitizeNumberInput(e.target.value, false))}
+                    inputMode="numeric"
+                    disabled={!paid}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Temp (°C)"
+                    value={tempC}
+                    onChange={(e) => setTempC(sanitizeNumberInput(e.target.value, true))}
+                    inputMode="decimal"
+                    disabled={!paid}
+                  />
                 </div>
 
                 <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>

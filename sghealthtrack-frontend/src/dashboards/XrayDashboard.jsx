@@ -263,6 +263,14 @@ export default function XrayDashboard({ session }) {
       setMsg("");
       if (!selected?.id) throw new Error("No case selected.");
 
+      if (!findings.trim() && !impression.trim()) {
+        throw new Error("Please enter findings or impression before marking done.");
+      }
+
+      if (caseNo.trim() && caseNo.trim().length < 3) {
+        throw new Error("Case No. must be at least 3 characters.");
+      }
+
       const apptId = selected.id;
       const normalValue = isNormal === "yes" ? true : isNormal === "no" ? false : null;
       const now = new Date().toISOString();

@@ -23,6 +23,20 @@ function cleanOrNull(v) {
   const s = typeof v === "string" ? v.trim() : "";
   return s ? s : null;
 }
+const MIN_AGE = 1;
+const MAX_AGE = 120;
+
+function cleanContact(raw) {
+  return String(raw || "").replace(/[^\d+]/g, "");
+}
+
+function isValidContact(raw) {
+  const v = cleanContact(raw);
+  if (!v) return false;
+  if (v.startsWith("+63")) return /^\+63\d{10}$/.test(v);
+  if (v.startsWith("09")) return /^09\d{9}$/.test(v);
+  return /^\d{10,11}$/.test(v);
+}
 
 // When user signed up but email confirmation was ON, we stored these in auth metadata.
 // This reads them and uses them to auto-fill + auto-save a profiles row on first login.
@@ -208,9 +222,13 @@ export default function PatientProfile({ session, onProfileUpdated }) {
     if (!fullName.trim()) return setMsg("Full name is required.");
     if (!gender) return setMsg("Gender is required.");
     if (!birthDate) return setMsg("Birth date is required.");
+    if (age === "" || age < MIN_AGE || age > MAX_AGE) return setMsg("Birth date is invalid.");
     if (!civilStatus) return setMsg("Civil status is required.");
     if (!address.trim()) return setMsg("Address is required.");
     if (!contactNo.trim()) return setMsg("Contact no. is required.");
+    if (!isValidContact(contactNo)) {
+      return setMsg("Contact no. must be a valid PH number (09XXXXXXXXX or +63XXXXXXXXXX).");
+    }
 
     setSaving(true);
 
@@ -224,7 +242,7 @@ export default function PatientProfile({ session, onProfileUpdated }) {
       age: typeof age === "number" ? age : null,
       civil_status: civilStatus,
       address: address.trim(),
-      contact_no: contactNo.trim(),
+      contact_no: cleanContact(contactNo),
       updated_at: new Date().toISOString(),
     };
 
@@ -308,7 +326,14 @@ export default function PatientProfile({ session, onProfileUpdated }) {
 
           <div>
             <label className="label">Contact No.</label>
-            <input className="input" value={contactNo} onChange={(e) => setContactNo(e.target.value)} />
+            <input
+              className="input"
+              value={contactNo}
+              onChange={(e) => setContactNo(cleanContact(e.target.value))}
+              inputMode="numeric"
+              maxLength={13}
+              type="tel"
+            />
           </div>
         </div>
       </div>

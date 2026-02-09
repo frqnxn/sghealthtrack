@@ -12,6 +12,28 @@ const EMAIL_EXISTS_CODES = new Set([
   "identity_already_exists",
   "email_conflict_identity_not_deletable",
 ]);
+const MIN_AGE = 1;
+const MAX_AGE = 120;
+
+function cleanContact(raw) {
+  return String(raw || "").replace(/[^\d+]/g, "");
+}
+
+function isValidContact(raw) {
+  const v = cleanContact(raw);
+  if (!v) return false;
+  if (v.startsWith("+63")) return /^\+63\d{10}$/.test(v);
+  if (v.startsWith("09")) return /^09\d{9}$/.test(v);
+  return /^\d{10,11}$/.test(v);
+}
+
+function validatePassword(value) {
+  if (!value || value.length < 8) return "Password must be at least 8 characters.";
+  if (!/[a-z]/.test(value)) return "Password must include a lowercase letter.";
+  if (!/[A-Z]/.test(value)) return "Password must include an uppercase letter.";
+  if (!/[0-9]/.test(value)) return "Password must include a number.";
+  return "";
+}
 
 function calcAge(birthDateStr) {
   if (!birthDateStr) return "";
@@ -54,17 +76,19 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
     if (!e) return "Email is required.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return "Please enter a valid email address.";
     if (!password) return "Password is required.";
-    if (password.length < 6) return "Password must be at least 6 characters.";
+    const passError = validatePassword(password);
+    if (passError) return passError;
     if (e.endsWith(STAFF_DOMAIN)) return `Staff accounts (${STAFF_DOMAIN}) are created by the admin only.`;
 
     if (!firstName.trim()) return "First name is required.";
     if (!lastName.trim()) return "Last name is required.";
     if (!gender) return "Gender is required.";
     if (!birthDate) return "Birth date is required.";
-    if (age === "" || age < 0) return "Birth date is invalid.";
+    if (age === "" || age < MIN_AGE || age > MAX_AGE) return "Birth date is invalid.";
     if (!civilStatus) return "Civil status is required.";
     if (!address.trim()) return "Address is required.";
     if (!contactNo.trim()) return "Contact no. is required.";
+    if (!isValidContact(contactNo)) return "Contact no. must be a valid PH number (09XXXXXXXXX or +63XXXXXXXXXX).";
 
     return null;
   }
@@ -93,7 +117,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
       age: typeof age === "number" ? age : null,
       civil_status: civilStatus,
       address: address.trim(),
-      contact_no: contactNo.trim(),
+      contact_no: cleanContact(contactNo),
     };
 
     const redirectTo = `${window.location.origin}/auth/callback`;
@@ -216,6 +240,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
               <input
                 className="auth-input"
                 placeholder="you@gmail.com"
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -227,6 +252,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 className="auth-input"
                 placeholder="••••••••"
                 type="password"
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -284,7 +310,10 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 className="auth-input"
                 placeholder="09XXXXXXXXX"
                 value={contactNo}
-                onChange={(e) => setContactNo(e.target.value)}
+                onChange={(e) => setContactNo(cleanContact(e.target.value))}
+                inputMode="numeric"
+                maxLength={13}
+                type="tel"
               />
             </div>
             <div>

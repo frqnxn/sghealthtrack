@@ -121,6 +121,14 @@ function cleanOrNull(v) {
   return s ? s : null;
 }
 
+function validatePassword(value) {
+  if (!value || value.length < 8) return "Password must be at least 8 characters.";
+  if (!/[a-z]/.test(value)) return "Password must include a lowercase letter.";
+  if (!/[A-Z]/.test(value)) return "Password must include an uppercase letter.";
+  if (!/[0-9]/.test(value)) return "Password must include a number.";
+  return "";
+}
+
 function HealthProgressDashboard({ vitals }) {
   const list = vitals || [];
   const latest = list[0] || null;
@@ -1604,7 +1612,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   async function changePassword() {
     setSettingsMsg("");
-    if (!newPassword || newPassword.length < 6) return setSettingsMsg("Password must be at least 6 characters.");
+    const passError = validatePassword(newPassword);
+    if (passError) return setSettingsMsg(passError);
 
     setSavingSettings(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
@@ -3660,7 +3669,8 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="New password (min 6 chars)"
+                  placeholder="New password (min 8 chars)"
+                  minLength={8}
                 />
                 <button className="btn btn-primary" onClick={changePassword} disabled={savingSettings} style={{ marginTop: 10 }}>
                   {savingSettings ? "Updating..." : "Update Password"}
