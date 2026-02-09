@@ -1,20 +1,20 @@
 /* App-level — SG Healthtrack UI/UX design (turquoise, white) */
 
 :root {
-  --bg: #f7f8fb;
-  --panel: #ffffff;
-  --panel2: #ffffff;
-  --border: #e5e7eb;
-  --border-strong: #d1d5db;
-  --text: #111827;
-  --muted: #6b7280;
-  --primary: #1e9184;
-  --primary-light: #e6f5f2;
+  --bg: var(--bg-page);
+  --panel: var(--bg-card);
+  --panel2: var(--bg-soft);
+  --border: var(--border);
+  --border-strong: var(--border-strong);
+  --text: var(--text);
+  --muted: var(--text-muted);
+  --primary: var(--primary);
+  --primary-light: var(--primary-light);
 }
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
 }
@@ -27,15 +27,17 @@ h1, h2, h3, h4 {
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-card);
   color: var(--text);
 }
 
 .label {
   display: block;
   font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 6px;
 }
@@ -44,11 +46,12 @@ h1, h2, h3, h4 {
 select,
 input[type="date"] {
   width: 100%;
-  max-width: 520px;
-  padding: 11px 12px;
-  border-radius: 12px;
+  max-width: none;
+  height: var(--field-height);
+  padding: var(--field-padding);
+  border-radius: var(--radius);
   border: 1px solid var(--border-strong);
-  background: #f9fafb;
+  background: #fbfbfd;
   color: var(--text);
   outline: none;
 }
@@ -60,12 +63,12 @@ input[type="date"] {
 .input:focus,
 select:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(15, 125, 92, 0.12);
+  box-shadow: 0 0 0 3px var(--primary-muted);
 }
 
 .btn {
-  padding: 10px 16px;
-  border-radius: 12px;
+  padding: 10px 18px;
+  border-radius: var(--radius);
   border: 1px solid var(--border-strong);
   background: var(--panel);
   color: var(--text);
@@ -77,9 +80,13 @@ select:focus {
 
 .btn:hover {
   background: var(--primary-light);
-  border-color: rgba(15, 125, 92, 0.35);
+  border-color: var(--primary-border);
   color: var(--primary);
   transform: translateY(-1px);
+}
+
+.btn.ghost {
+  background: transparent;
 }
 
 .btn:disabled {
@@ -98,8 +105,8 @@ select:focus {
 }
 
 .btn-primary:hover {
-  background: #1a7f73;
-  border-color: #1a7f73;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
   color: #ffffff;
 }
 
@@ -120,24 +127,27 @@ select:focus {
 
 .table th,
 .table td {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 12px;
+  color: var(--muted);
+  background: #fbfaf8;
+}
+
+.table th,
+.table td {
   text-align: left;
   font-size: 14px;
   color: var(--text);
 }
 
-.table th {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: #f9fafb;
-}
-
 .table tbody tr:hover td {
-  background: #f5f7fb;
+  background: #f6f4ef;
 }
 
 .table-scroll {

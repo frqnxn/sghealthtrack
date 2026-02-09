@@ -11,6 +11,7 @@ import CashierPage from "./pages/CashierPage";
 import LabPage from "./pages/LabPage";
 import PatientSignupProfile from "./pages/PatientSignupProfile";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
+import LandingPage from "./pages/LandingPage";
 
 import "./styles/clinic.css";
 
@@ -439,7 +440,7 @@ export default function App() {
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/" element={
         !session ? (
-          <Navigate to="/login" replace />
+          <LandingPage />
         ) : (
           <DashboardLayout session={session} role={role} onLogout={signOut} />
         )

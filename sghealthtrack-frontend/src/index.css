@@ -1,6 +1,6 @@
 /* Minimal base — SG HealthTrack uses clinic.css for theme */
 :root {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -17,15 +17,15 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f5faf9;
-  color: #0f172a;
+  background: var(--bg-page);
+  color: var(--text);
 }
 
 a {
   font-weight: 500;
-  color: #0db4aa;
+  color: var(--primary);
   text-decoration: none;
 }
 a:hover {
-  color: #0a9d94;
+  color: var(--primary-hover);
 }

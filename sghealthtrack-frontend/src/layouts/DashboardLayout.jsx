@@ -103,7 +103,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
 
   return (
     <ToastContext.Provider value={{ showToast }}>
-      <div className="dashboard-layout">
+      <div className="dashboard-layout" data-role={role || "unknown"}>
         <Sidebar
           navItems={navItems}
           userName={userName}

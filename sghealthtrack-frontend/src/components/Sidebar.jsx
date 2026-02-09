@@ -1,6 +1,6 @@
 // Sidebar — single nav. Desktop: fixed. Mobile: drawer + hamburger.
 import { NavLink } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
 
 const ROUTES = [
@@ -293,7 +293,19 @@ function NavIcon({ path }) {
   );
 }
 
+function formatRoleLabel(role) {
+  const s = String(role || "").trim().toLowerCase();
+  if (!s) return "";
+  if (s === "lab") return "Lab Tech";
+  if (s === "cashier") return "Cashier";
+  if (s === "admin") return "Admin";
+  if (s === "doctor") return "Doctor";
+  if (s === "patient") return "Patient";
+  return s.replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 export default function Sidebar({ navItems = ROUTES, userName, userEmail, role, onLogout, open, onClose }) {
+  const roleLabel = useMemo(() => formatRoleLabel(role), [role]);
   const displayName = String(userName || userEmail || "").trim();
   const displayEmail = String(userEmail || "").trim();
   const showEmail = displayEmail && displayEmail !== displayName;
@@ -327,6 +339,7 @@ export default function Sidebar({ navItems = ROUTES, userName, userEmail, role, 
           <div className="sidebar-brand-text">
             <span className="sidebar-title">SG HealthTrack</span>
             <span className="sidebar-subtitle">Medical Screening</span>
+            {roleLabel ? <span className="sidebar-role">{roleLabel}</span> : null}
           </div>
         </div>
         <nav className="sidebar-nav">
