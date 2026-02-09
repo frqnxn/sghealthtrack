@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { normalizeCompanyName } from "../utils/companyPartners";
 import sgHealthtrackLogo from "../image/sghealthtrack-logo.png";
+import clinicHero from "../image/clinic-template.jpeg";
 
 const STAFF_DOMAIN = "@smartguys.com";
 const EMAIL_EXISTS_CODES = new Set([
@@ -187,94 +188,43 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
   }
 
   return (
-    <div className="auth-site">
-      <div className="auth-topbar">
-        <div className="auth-topbar-item">Landline: (+63) 7368-5241</div>
-        <div className="auth-topbar-item">Globe: (+63) 917-864-6762</div>
-        <div className="auth-topbar-item">Smart: (+63) 962-067-3669</div>
-        <div className="auth-topbar-item">Clinic Hours: Mon–Sat, 7:00 AM – 3:00 PM</div>
-      </div>
-
-      <header className="auth-header">
-        <div className="auth-container auth-header-inner">
-          <div className="auth-nav-brand">
-            <img className="auth-nav-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
-            <div>
-              <div className="auth-nav-title">SG HealthTrack</div>
-              <div className="auth-nav-subtitle">Diagnostic & Preventive Care</div>
-            </div>
+    <div className="auth-split">
+      <div className="auth-panel auth-panel-left">
+        <div className="auth-logo-row">
+          <div className="auth-logo-badge">
+            <img src={sgHealthtrackLogo} alt="SG HealthTrack" />
           </div>
-          <nav className="auth-nav-links">
-            <span className="auth-nav-link">About</span>
-            <span className="auth-nav-link">Packages</span>
-            <span className="auth-nav-link">Specialized Care</span>
-            <span className="auth-nav-link">Promos</span>
-            <span className="auth-nav-link">Blog</span>
-          </nav>
-          <button className="auth-cta-pill" type="button" onClick={() => (onGoLogin ?? onDone)?.()}>
-            Already have an account?
+          <div>
+            <div className="auth-panel-title">Create account</div>
+            <div className="auth-panel-subtitle">Fill in your details to start booking</div>
+          </div>
+        </div>
+
+        <div className="auth-tabs">
+          <button className="auth-tab" type="button" onClick={() => (onGoLogin ?? onDone)?.()}>
+            Login
+          </button>
+          <button className="auth-tab active" type="button">
+            Sign up
           </button>
         </div>
-      </header>
 
-      <section className="auth-hero">
-        <div className="auth-container auth-hero-inner">
-          <div className="auth-hero-content">
-            <div className="auth-hero-brand">SG HealthTrack</div>
-            <h1 className="auth-hero-title">Create your account, and let care run smoothly.</h1>
-            <p className="auth-hero-subtitle">
-              Book fast, get confirmed, and track your lab and X‑ray progress in one place.
-            </p>
-            <div className="auth-hero-actions">
-              <button className="auth-hero-btn" type="button" onClick={() => (onGoLogin ?? onDone)?.()}>
-                Go to Login
-              </button>
-              <a className="auth-hero-btn ghost" href="#packages">
-                View Packages
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="auth-section">
-        <div className="auth-container">
-          <div className="auth-section-title">
-            Create your account to start booking
-          </div>
-          <div className="auth-section-card">
-            <div className="auth-card auth-card--wide auth-card--flat">
-          <div className="auth-brand">
-            <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
+        <form onSubmit={handleSignup} className="auth-form-block auth-form-stack">
+          <div className="auth-grid-2">
             <div>
-              <div className="auth-title">SG HealthTrack</div>
-              <div className="auth-subtitle">Clinic Management System</div>
-            </div>
-          </div>
-
-          <h2 className="auth-heading">Create Patient Account</h2>
-          <p className="auth-help">
-            Create your account and fill out patient information for organized records.
-          </p>
-
-          <form onSubmit={handleSignup} className="auth-form">
-          {/* Top (email/password) */}
-          <div style={grid2}>
-            <div>
-              <label className="label">Email</label>
+              <label className="auth-label">Email</label>
               <input
-                className="input"
+                className="auth-input"
                 placeholder="you@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
               />
             </div>
-
             <div>
-              <label className="label">Password</label>
+              <label className="auth-label">Password</label>
               <input
-                className="input"
+                className="auth-input"
                 placeholder="••••••••"
                 type="password"
                 value={password}
@@ -284,103 +234,85 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
             </div>
           </div>
 
-          <div className="auth-footnote" style={{ marginTop: 10 }}>
+          <div className="auth-footnote">
             Staff accounts ({STAFF_DOMAIN}) are created by the clinic admin only.
           </div>
 
-          <div style={{ height: 10 }} />
-
-          {/* Patient info */}
-          <div style={grid2}>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={{ ...grid3, marginTop: 0 }}>
-                <div>
-                  <label className="label">First name</label>
-                  <input
-                    className="input"
-                    placeholder="Juan"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="label">Middle name (optional)</label>
-                  <input
-                    className="input"
-                    placeholder="Santos"
-                    value={middleName}
-                    onChange={(e) => setMiddleName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="label">Last name</label>
-                  <input
-                    className="input"
-                    placeholder="Dela Cruz"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
+          <div className="auth-grid-3">
             <div>
-              <label className="label">Company (optional)</label>
+              <label className="auth-label">First name</label>
               <input
-                className="input"
+                className="auth-input"
+                placeholder="Juan"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="auth-label">Middle name (optional)</label>
+              <input
+                className="auth-input"
+                placeholder="Santos"
+                value={middleName}
+                onChange={(e) => setMiddleName(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="auth-label">Last name</label>
+              <input
+                className="auth-input"
+                placeholder="Dela Cruz"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="auth-grid-2">
+            <div>
+              <label className="auth-label">Company (optional)</label>
+              <input
+                className="auth-input"
                 placeholder="Company name"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
               />
             </div>
-
             <div>
-              <label className="label">Contact no.</label>
+              <label className="auth-label">Contact no.</label>
               <input
-                className="input"
+                className="auth-input"
                 placeholder="09XXXXXXXXX"
                 value={contactNo}
                 onChange={(e) => setContactNo(e.target.value)}
               />
             </div>
-          </div>
-
-          <div style={grid3}>
             <div>
-              <label className="label">Gender</label>
-              <select className="input" value={gender} onChange={(e) => setGender(e.target.value)}>
+              <label className="auth-label">Gender</label>
+              <select className="auth-input" value={gender} onChange={(e) => setGender(e.target.value)}>
                 <option value="">Select…</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="prefer_not_to_say">Prefer not to say</option>
               </select>
             </div>
-
             <div>
-              <label className="label">Birth date</label>
+              <label className="auth-label">Birth date</label>
               <input
-                className="input"
+                className="auth-input"
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
               />
             </div>
-
             <div>
-              <label className="label">Age</label>
-              <input className="input" value={age === "" ? "" : String(age)} readOnly />
-              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Auto-calculated</div>
+              <label className="auth-label">Age</label>
+              <input className="auth-input" value={age === "" ? "" : String(age)} readOnly />
+              <div className="auth-hint">Auto-calculated</div>
             </div>
-          </div>
-
-          <div style={grid2}>
             <div>
-              <label className="label">Civil status</label>
-              <select
-                className="input"
-                value={civilStatus}
-                onChange={(e) => setCivilStatus(e.target.value)}
-              >
+              <label className="auth-label">Civil status</label>
+              <select className="auth-input" value={civilStatus} onChange={(e) => setCivilStatus(e.target.value)}>
                 <option value="">Select</option>
                 <option value="single">Single</option>
                 <option value="married">Married</option>
@@ -388,153 +320,54 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 <option value="separated">Separated</option>
               </select>
             </div>
-            <div>
-              <label className="label">Address</label>
-              <input
-                className="input"
-                placeholder="Complete address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
+          </div>
+
+          <div>
+            <label className="auth-label">Address</label>
+            <input
+              className="auth-input"
+              placeholder="Complete address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+
+          <div className="auth-form-actions">
+            <button className="auth-primary-btn" type="submit" disabled={loading}>
+              {loading ? "Creating account..." : "Create Account"}
+            </button>
+            <button className="auth-outline-btn" type="button" onClick={() => (onGoLogin ?? onDone)?.()}>
+              Back to Login
+            </button>
           </div>
 
           {msg && (
-            <div
-              className={`auth-msg ${isSuccessMsg ? "auth-msg-success" : "auth-msg-error"}`}
-              style={{ whiteSpace: "pre-wrap" }}
-            >
+            <div className={`auth-msg ${isSuccessMsg ? "auth-msg-success" : "auth-msg-error"}`} style={{ whiteSpace: "pre-wrap" }}>
               {msg}
             </div>
           )}
 
-          <button
-            className="auth-btn-primary"
-            type="submit"
-            disabled={loading}
-            style={{ marginTop: 12 }}
-          >
-            {loading ? "Creating account..." : "Create Patient Account"}
-          </button>
-
-          <button
-            className="auth-link"
-            type="button"
-            onClick={() => (onGoLogin ?? onDone)?.()}
-            disabled={loading}
-            style={{ margin: "10px auto 0", display: "block", textAlign: "center" }}
-          >
-            Already have an account? Login
-          </button>
-
           {showResend && (
-            <button
-              className="auth-btn-ghost"
-              type="button"
-              onClick={resendConfirmation}
-              disabled={loading}
-              style={{ marginTop: 10 }}
-            >
+            <button className="auth-link" type="button" onClick={resendConfirmation}>
               Resend Confirmation Email
             </button>
           )}
+        </form>
+      </div>
 
-          </form>
+      <div className="auth-panel auth-panel-right">
+        <img src={clinicHero} alt="Clinic interior" />
+        <div className="auth-hero-overlay">
+          <h2>Streamlined Healthcare Management</h2>
+          <p>
+            Access patient records, manage appointments, and track diagnostic results securely in one place.
+          </p>
+          <div className="auth-hero-tags">
+            <span>24/7 System Access</span>
+            <span>Secure Records</span>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
-
-      <section className="auth-section">
-        <div className="auth-container" id="about">
-          <div className="auth-section-title">About the clinic</div>
-          <div className="auth-about-grid">
-            <div className="auth-about-card">
-              <div className="auth-about-title">Trusted screening partner</div>
-              <div className="auth-about-text">
-                We support pre‑employment and annual medical requirements with a streamlined, patient‑first
-                process.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Fast confirmations</div>
-              <div className="auth-about-text">
-                Book online and receive schedule updates from the clinic team without the back‑and‑forth.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Secure records</div>
-              <div className="auth-about-text">
-                View lab progress and download your medical report once released.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Complete screening flow</div>
-              <div className="auth-about-text">
-                Physical exam, lab tests, and X‑ray tracking built into one patient experience.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Clinic‑verified updates</div>
-              <div className="auth-about-text">
-                Receive status changes as your results move through the workflow.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Patient‑first support</div>
-              <div className="auth-about-text">
-                Clear reminders and a simple booking flow that reduces waiting time.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="auth-section alt" id="packages">
-        <div className="auth-container">
-          <div className="auth-section-title">Featured packages</div>
-          <div className="auth-packages">
-            <div className="auth-package-card">
-              <div className="auth-package-title">Pre-employment Basic</div>
-              <div className="auth-package-text">Physical Exam • Visual Acuity • Height & Weight</div>
-              <div className="auth-package-chip">CBC & Platelet</div>
-              <div className="auth-package-chip">Urinalysis</div>
-            </div>
-            <div className="auth-package-card">
-              <div className="auth-package-title">Pre-employment Plus</div>
-              <div className="auth-package-text">CBC & Platelet • Urinalysis • Fecalysis</div>
-              <div className="auth-package-chip">Drug Test</div>
-              <div className="auth-package-chip">Hep B</div>
-            </div>
-            <div className="auth-package-card">
-              <div className="auth-package-title">Executive Screening</div>
-              <div className="auth-package-text">Physical Exam • ECG • Chest X-ray</div>
-              <div className="auth-package-chip">Blood Typing</div>
-              <div className="auth-package-chip">Audiometry</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="auth-footer">
-        <div className="auth-container auth-footer-grid">
-          <div className="auth-footer-col">
-            <div className="auth-footer-title">Clinic Hours</div>
-            <div className="auth-footer-text">Monday – Saturday</div>
-            <div className="auth-footer-text">7:00 AM – 3:00 PM</div>
-          </div>
-          <div className="auth-footer-col">
-            <div className="auth-footer-title">Patient Care Lines</div>
-            <div className="auth-footer-text">(+63) 917-864-6762</div>
-            <div className="auth-footer-text">(+63) 962-067-3669</div>
-          </div>
-          <div className="auth-footer-col">
-            <div className="auth-footer-title">Clinic Address</div>
-            <div className="auth-footer-text">Calamba City, Laguna</div>
-            <div className="auth-footer-text">Philippines</div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import sgHealthtrackLogo from "./image/sghealthtrack-logo.png";
+import clinicHero from "./image/clinic-template.jpeg";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardRoot from "./pages/DashboardRoot";
@@ -28,212 +29,72 @@ function LoginPage({ staffDomain = STAFF_DOMAIN, onLogin, onGoSignup, onForgotPa
   }
 
   return (
-    <div className="auth-site">
-      <div className="auth-topbar">
-        <div className="auth-topbar-item">Landline: (+63) 7368-5241</div>
-        <div className="auth-topbar-item">Globe: (+63) 917-864-6762</div>
-        <div className="auth-topbar-item">Smart: (+63) 962-067-3669</div>
-        <div className="auth-topbar-item">Clinic Hours: Mon–Sat, 7:00 AM – 3:00 PM</div>
+    <div className="auth-split">
+      <div className="auth-panel auth-panel-left">
+        <div className="auth-logo-row">
+          <div className="auth-logo-badge">
+            <img src={sgHealthtrackLogo} alt="SG HealthTrack" />
+          </div>
+          <div>
+            <div className="auth-panel-title">Welcome back</div>
+            <div className="auth-panel-subtitle">Enter your credentials to access the portal</div>
+          </div>
+        </div>
+
+        <div className="auth-tabs">
+          <button className="auth-tab active" type="button">Login</button>
+          <button className="auth-tab" type="button" onClick={onGoSignup}>Sign up</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="auth-form-block">
+          <label className="auth-label">Email</label>
+          <input
+            className="auth-input"
+            placeholder="name@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+
+          <label className="auth-label">Password</label>
+          <input
+            className="auth-input"
+            placeholder="••••••••"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+
+          <button className="auth-primary-btn" type="submit">
+            Sign In →
+          </button>
+
+          {msg && <div className={`auth-msg ${isSuccessMsg ? "auth-msg-success" : "auth-msg-error"}`}>{msg}</div>}
+
+          <button className="auth-link" type="button" onClick={() => onForgotPassword?.(email)}>
+            Forgot password?
+          </button>
+          <div className="auth-footnote">
+            Staff accounts ({staffDomain}) are created by the clinic admin only.
+          </div>
+          <a className="auth-back" href="/">Back to Home</a>
+        </form>
       </div>
 
-      <header className="auth-header">
-        <div className="auth-container auth-header-inner">
-          <div className="auth-nav-brand">
-            <img className="auth-nav-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
-            <div>
-              <div className="auth-nav-title">SG HealthTrack</div>
-              <div className="auth-nav-subtitle">Diagnostic & Preventive Care</div>
-            </div>
-          </div>
-          <nav className="auth-nav-links">
-            <span className="auth-nav-link">About</span>
-            <span className="auth-nav-link">Packages</span>
-            <span className="auth-nav-link">Specialized Care</span>
-            <span className="auth-nav-link">Promos</span>
-            <span className="auth-nav-link">Blog</span>
-          </nav>
-          <button className="auth-cta-pill" type="button" onClick={onGoSignup}>
-            Book an Appointment
-          </button>
-        </div>
-      </header>
-
-      <section className="auth-hero">
-        <div className="auth-container auth-hero-inner">
-          <div className="auth-hero-content">
-            <div className="auth-hero-brand">SG HealthTrack</div>
-            <h1 className="auth-hero-title">Your health, monitored. Your care, connected.</h1>
-            <p className="auth-hero-subtitle">
-              Book in minutes, get confirmed quickly, and access your medical report online.
-            </p>
-            <div className="auth-hero-actions">
-              <button className="auth-hero-btn" type="button" onClick={onGoSignup}>
-                Book Now
-              </button>
-              <a className="auth-hero-btn ghost" href="#packages">
-                View Packages
-              </a>
-            </div>
+      <div className="auth-panel auth-panel-right">
+        <img src={clinicHero} alt="Clinic interior" />
+        <div className="auth-hero-overlay">
+          <h2>Streamlined Healthcare Management</h2>
+          <p>
+            Access patient records, manage appointments, and track diagnostic results securely in one place.
+          </p>
+          <div className="auth-hero-tags">
+            <span>24/7 System Access</span>
+            <span>Secure Records</span>
           </div>
         </div>
-      </section>
-
-      <section className="auth-section">
-        <div className="auth-container">
-          <div className="auth-section-title">
-            Schedule your next health checkup with us
-          </div>
-          <div className="auth-section-card">
-            <div className="auth-card auth-card--wide auth-card--flat">
-              <div className="auth-brand">
-                <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
-                <div>
-                  <div className="auth-title">SG HealthTrack</div>
-                  <div className="auth-subtitle">Clinic Management System</div>
-                </div>
-              </div>
-              <h2 className="auth-heading">Welcome back</h2>
-              <p className="auth-help">Sign in to continue.</p>
-              <form onSubmit={handleSubmit} className="auth-form auth-form--wide">
-                <div className="auth-form-grid">
-                  <div>
-                    <label className="label">Email</label>
-                    <input
-                      className="input"
-                      placeholder="you@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      autoComplete="email"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Password</label>
-                    <input
-                      className="input"
-                      placeholder="••••••••"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      autoComplete="current-password"
-                    />
-                  </div>
-                </div>
-                <button
-                  className="auth-link"
-                  type="button"
-                  onClick={() => onForgotPassword?.(email)}
-                  style={{ marginTop: 8 }}
-                >
-                  Forgot password?
-                </button>
-                <div className="auth-form-actions">
-                  <button className="auth-btn-primary" type="submit">
-                    Login
-                  </button>
-                  <button className="auth-btn-ghost" type="button" onClick={onGoSignup}>
-                    Create patient account
-                  </button>
-                </div>
-            {msg && <div className={`auth-msg ${isSuccessMsg ? "auth-msg-success" : "auth-msg-error"}`}>{msg}</div>}
-                <div className="auth-footnote">
-                  Staff accounts ({staffDomain}) are created by the clinic admin only.
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="auth-section">
-        <div className="auth-container" id="about">
-          <div className="auth-section-title">About the clinic</div>
-          <div className="auth-about-grid">
-            <div className="auth-about-card">
-              <div className="auth-about-title">Trusted screening partner</div>
-              <div className="auth-about-text">
-                We support pre‑employment and annual medical requirements with a streamlined, patient‑first
-                process.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Fast confirmations</div>
-              <div className="auth-about-text">
-                Book online and receive schedule updates from the clinic team without the back‑and‑forth.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Secure records</div>
-              <div className="auth-about-text">
-                View lab progress and download your medical report once released.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Complete screening flow</div>
-              <div className="auth-about-text">
-                Physical exam, lab tests, and X‑ray tracking built into one patient experience.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Clinic‑verified updates</div>
-              <div className="auth-about-text">
-                Receive status changes as your results move through the workflow.
-              </div>
-            </div>
-            <div className="auth-about-card">
-              <div className="auth-about-title">Patient‑first support</div>
-              <div className="auth-about-text">
-                Clear reminders and a simple booking flow that reduces waiting time.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="auth-section alt" id="packages">
-        <div className="auth-container">
-          <div className="auth-section-title">Featured packages</div>
-          <div className="auth-packages">
-            <div className="auth-package-card">
-              <div className="auth-package-title">Pre-employment Basic</div>
-              <div className="auth-package-text">Physical Exam • Visual Acuity • Height & Weight</div>
-              <div className="auth-package-chip">CBC & Platelet</div>
-              <div className="auth-package-chip">Urinalysis</div>
-            </div>
-            <div className="auth-package-card">
-              <div className="auth-package-title">Pre-employment Plus</div>
-              <div className="auth-package-text">CBC & Platelet • Urinalysis • Fecalysis</div>
-              <div className="auth-package-chip">Drug Test</div>
-              <div className="auth-package-chip">Hep B</div>
-            </div>
-            <div className="auth-package-card">
-              <div className="auth-package-title">Executive Screening</div>
-              <div className="auth-package-text">Physical Exam • ECG • Chest X-ray</div>
-              <div className="auth-package-chip">Blood Typing</div>
-              <div className="auth-package-chip">Audiometry</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="auth-footer">
-        <div className="auth-container auth-footer-grid">
-          <div className="auth-footer-col">
-            <div className="auth-footer-title">Clinic Hours</div>
-            <div className="auth-footer-text">Monday – Saturday</div>
-            <div className="auth-footer-text">7:00 AM – 3:00 PM</div>
-          </div>
-          <div className="auth-footer-col">
-            <div className="auth-footer-title">Patient Care Lines</div>
-            <div className="auth-footer-text">(+63) 917-864-6762</div>
-            <div className="auth-footer-text">(+63) 962-067-3669</div>
-          </div>
-          <div className="auth-footer-col">
-            <div className="auth-footer-title">Clinic Address</div>
-            <div className="auth-footer-text">Calamba City, Laguna</div>
-            <div className="auth-footer-text">Philippines</div>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }
