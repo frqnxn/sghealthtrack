@@ -26,7 +26,7 @@ const ADMIN_ROUTES = [
 ];
 
 const RECEPTIONIST_ROUTES = [
-  { path: "/receptionist/appointments", label: "Appointments" },
+  { path: "/receptionist/appointments", label: "Appointments", iconPath: "/appointments" },
 ];
 
 const CASHIER_ROUTES = [

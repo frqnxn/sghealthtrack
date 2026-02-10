@@ -13,13 +13,14 @@ const ROUTES = [
   { path: "/settings", label: "Settings" },
 ];
 
-function NavIcon({ path }) {
+function NavIcon({ path, iconPath }) {
+  const key = iconPath || path;
   // Simple inline icons so we don't add extra dependencies.
   // Icons are chosen to loosely match the Canva design.
   const stroke = "currentColor";
   const strokeWidth = 1.7;
 
-  if (path === "/dashboard") {
+  if (key === "/dashboard") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -33,7 +34,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/appointments" || path === "/admin/appointments" || path === "/receptionist/appointments") {
+  if (key === "/appointments" || key === "/admin/appointments" || key === "/receptionist/appointments") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <rect
@@ -57,7 +58,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/medical-process") {
+  if (key === "/medical-process") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -79,7 +80,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/lab-tests") {
+  if (key === "/lab-tests") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -94,7 +95,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/xray-results") {
+  if (key === "/xray-results") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <circle
@@ -116,7 +117,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/payments" || path === "/cashier/payments") {
+  if (key === "/payments" || key === "/cashier/payments") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <rect
@@ -160,7 +161,7 @@ function NavIcon({ path }) {
       </svg>
     );
   }
-  if (path === "/medical-records") {
+  if (key === "/medical-records") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -181,7 +182,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/settings" || path === "/admin/settings") {
+  if (key === "/settings" || key === "/admin/settings") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -202,7 +203,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/admin/patients") {
+  if (key === "/admin/patients") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -222,7 +223,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/admin/users") {
+  if (key === "/admin/users") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -242,7 +243,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/admin/companies") {
+  if (key === "/admin/companies") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -263,7 +264,7 @@ function NavIcon({ path }) {
     );
   }
 
-  if (path === "/admin/tools") {
+  if (key === "/admin/tools") {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
         <path
@@ -344,21 +345,21 @@ export default function Sidebar({ navItems = ROUTES, userName, userEmail, role, 
           </div>
         </div>
         <nav className="sidebar-nav">
-          {navItems.map(({ path, label }) => (
-            <NavLink
-              key={path}
-              to={path}
-              end={path === "/dashboard"}
-              className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-              onClick={onClose}
-            >
-              <span className="sidebar-link-inner">
-                <span className="sidebar-icon">
-                  <NavIcon path={path} />
-                </span>
-                <span className="sidebar-label">{label}</span>
-              </span>
-            </NavLink>
+              {navItems.map(({ path, label, iconPath }) => (
+                <NavLink
+                  key={path}
+                  to={path}
+                  end={path === "/dashboard"}
+                  className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+                  onClick={onClose}
+                >
+                  <span className="sidebar-link-inner">
+                    <span className="sidebar-icon">
+                      <NavIcon path={path} iconPath={iconPath} />
+                    </span>
+                    <span className="sidebar-label">{label}</span>
+                  </span>
+                </NavLink>
           ))}
         </nav>
         <div className="sidebar-user">
