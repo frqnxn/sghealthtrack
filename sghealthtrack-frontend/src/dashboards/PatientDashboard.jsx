@@ -2339,7 +2339,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
     const st = await supabase
       .from("appointment_steps")
-      .select("appointment_id, patient_id, done_at, xray_done_at, updated_at")
+      .select("appointment_id, patient_id, done_at, updated_at")
       .eq("patient_id", patientId)
       .order("updated_at", { ascending: false });
 
