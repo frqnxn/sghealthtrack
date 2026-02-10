@@ -638,36 +638,35 @@ export default function CashierDashboard({ session, page = "payments" }) {
     });
   }, [reportRows, reportDateFrom, reportDateTo]);
 
-  const analyticsDays = 30;
+  const paymentStats = useMemo(() => {
+    const computeStats = (days) => {
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(start.getDate() - (days - 1));
+      start.setHours(0, 0, 0, 0);
+      const map = new Map();
+      let total = 0;
 
-  const analyticsStart = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setDate(start.getDate() - (analyticsDays - 1));
-    start.setHours(0, 0, 0, 0);
-    return start;
-  }, [analyticsDays]);
+      for (const row of reportRows || []) {
+        const key = dayKey(row.recorded_at);
+        if (!key) continue;
+        const d = new Date(key + "T00:00:00");
+        if (d < start) continue;
+        map.set(key, (map.get(key) || 0) + 1);
+        total += 1;
+      }
 
-  const paymentSeries = useMemo(() => {
-    const map = new Map();
-    for (const row of reportRows || []) {
-      const key = dayKey(row.recorded_at);
-      if (!key) continue;
-      const d = new Date(key + "T00:00:00");
-      if (d < analyticsStart) continue;
-      map.set(key, (map.get(key) || 0) + 1);
-    }
-    const keys = Array.from(map.keys()).sort();
-    return keys.map((key) => ({ label: toDisplayDate(key), value: map.get(key) }));
-  }, [reportRows, analyticsStart]);
+      const values = Array.from(map.values());
+      const max = values.length ? Math.max(...values) : null;
+      const avg = total ? Math.round(total / days) : null;
+      return { avg, max };
+    };
 
-  const paymentAverage = useMemo(() => {
-    if (!paymentSeries.length) return { avg: null, max: null };
-    const values = paymentSeries.map((v) => Number(v.value)).filter((v) => Number.isFinite(v));
-    if (!values.length) return { avg: null, max: null };
-    const total = values.reduce((sum, v) => sum + v, 0);
-    return { avg: Math.round(total / values.length), max: Math.max(...values) };
-  }, [paymentSeries]);
+    return {
+      last7: computeStats(7),
+      last30: computeStats(30),
+    };
+  }, [reportRows]);
 
   const reportSummary = useMemo(() => {
     const now = new Date();
@@ -768,16 +767,29 @@ export default function CashierDashboard({ session, page = "payments" }) {
                 <div className="section-subtitle">Completed transactions per day.</div>
               </div>
             </div>
-            <div className="analytics-panel" style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
-              <div>
-                <div className="analytics-panel-title">Avg payments/day (last 30 days)</div>
-                <DonutChart
-                  value={paymentAverage.avg}
-                  max={paymentAverage.max || paymentAverage.avg || 1}
-                  label="Avg/day"
-                  unit=""
-                  color="#4338ca"
-                />
+            <div className="analytics-panel" style={{ marginTop: 12 }}>
+              <div className="analytics-panel-title">Avg payments per day</div>
+              <div className="analytics-donuts">
+                <div className="analytics-donut">
+                  <DonutChart
+                    value={paymentStats.last7.avg}
+                    max={paymentStats.last7.max || paymentStats.last7.avg || 1}
+                    label="7d avg"
+                    unit=""
+                    color="#4338ca"
+                    size={120}
+                  />
+                </div>
+                <div className="analytics-donut">
+                  <DonutChart
+                    value={paymentStats.last30.avg}
+                    max={paymentStats.last30.max || paymentStats.last30.avg || 1}
+                    label="30d avg"
+                    unit=""
+                    color="#4338ca"
+                    size={120}
+                  />
+                </div>
               </div>
             </div>
           </div>

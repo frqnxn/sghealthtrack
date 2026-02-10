@@ -1462,40 +1462,85 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     for (const [appointmentId, startMs] of vitalsByAppt.entries()) {
       const endMs = xrayByAppt.get(appointmentId);
       if (!endMs || endMs <= startMs) continue;
-      map.set(appointmentId, endMs - startMs);
+      map.set(appointmentId, { endMs, durationMs: endMs - startMs });
     }
 
     return map;
   }, [vitals, xrayResults]);
 
-  const formTimeStats = useMemo(() => {
-    const values = Array.from(formTimeByAppointment.values())
-      .map((row) => Math.round(row.durationMs / 60000))
+  const getWindowStart = (days) => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - (days - 1));
+    start.setHours(0, 0, 0, 0);
+    return start;
+  };
+
+  const computeAvgStats = (entries, days) => {
+    const start = getWindowStart(days);
+    const values = entries
+      .filter((entry) => entry?.endMs && entry.endMs >= start.getTime())
+      .map((entry) => Math.round(entry.durationMs / 60000))
       .filter((v) => Number.isFinite(v) && v > 0);
     if (!values.length) return { avg: null, max: null };
     const total = values.reduce((sum, v) => sum + v, 0);
     return { avg: Math.round(total / values.length), max: Math.max(...values) };
+  };
+
+  const formTimeStats = useMemo(() => {
+    const entries = Array.from(formTimeByAppointment.values());
+    const stats7 = computeAvgStats(entries, 7);
+    const stats30 = computeAvgStats(entries, 30);
+    return {
+      avg7: stats7.avg,
+      max7: stats7.max,
+      avg30: stats30.avg,
+      max30: stats30.max,
+    };
   }, [formTimeByAppointment]);
 
   const testsTimeStats = useMemo(() => {
-    const values = Array.from(testsTimeByAppointment.values())
-      .map((ms) => Math.round(ms / 60000))
-      .filter((v) => Number.isFinite(v) && v > 0);
-    if (!values.length) return { avg: null, max: null };
-    const total = values.reduce((sum, v) => sum + v, 0);
-    return { avg: Math.round(total / values.length), max: Math.max(...values) };
+    const entries = Array.from(testsTimeByAppointment.values());
+    const stats7 = computeAvgStats(entries, 7);
+    const stats30 = computeAvgStats(entries, 30);
+    return {
+      avg7: stats7.avg,
+      max7: stats7.max,
+      avg30: stats30.avg,
+      max30: stats30.max,
+    };
   }, [testsTimeByAppointment]);
 
   const weightStats = useMemo(() => {
-    const values = (vitals || [])
-      .filter((v) => v?.weight_kg != null)
-      .map((v) => Number(v.weight_kg))
-      .filter((v) => Number.isFinite(v) && v > 0);
-    if (!values.length) return { avg: null, max: null };
-    const total = values.reduce((sum, v) => sum + v, 0);
+    const rows = (vitals || [])
+      .filter((v) => v?.weight_kg != null && v?.recorded_at)
+      .map((v) => ({
+        endMs: new Date(v.recorded_at).getTime(),
+        durationMs: Number(v.weight_kg) * 60000,
+        value: Number(v.weight_kg),
+      }))
+      .filter((v) => Number.isFinite(v.value) && v.value > 0 && Number.isFinite(v.endMs));
+
+    const computeWeightStats = (days) => {
+      const start = getWindowStart(days);
+      const values = rows
+        .filter((row) => row.endMs >= start.getTime())
+        .map((row) => row.value);
+      if (!values.length) return { avg: null, max: null };
+      const total = values.reduce((sum, v) => sum + v, 0);
+      return {
+        avg: Math.round((total / values.length) * 10) / 10,
+        max: Math.max(...values),
+      };
+    };
+
+    const stats7 = computeWeightStats(7);
+    const stats30 = computeWeightStats(30);
     return {
-      avg: Math.round((total / values.length) * 10) / 10,
-      max: Math.max(...values),
+      avg7: stats7.avg,
+      max7: stats7.max,
+      avg30: stats30.avg,
+      max30: stats30.max,
     };
   }, [vitals]);
 
@@ -1541,8 +1586,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     const prevId = ids[ids.length - 2];
     const last = testsTimeByAppointment.get(lastId);
     const prev = prevId ? testsTimeByAppointment.get(prevId) : null;
-    const current = Number.isFinite(last) ? Math.round(last / 60000) : null;
-    const previous = Number.isFinite(prev) ? Math.round(prev / 60000) : null;
+    const current = last ? Math.round(last.durationMs / 60000) : null;
+    const previous = prev ? Math.round(prev.durationMs / 60000) : null;
     return {
       current,
       trend: getTrendFromValues(current, previous),
@@ -2294,7 +2339,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
     const st = await supabase
       .from("appointment_steps")
-      .select("appointment_id, patient_id, done_at, lab_done_at, xray_done_at, updated_at")
+      .select("appointment_id, patient_id, done_at, xray_done_at, updated_at")
       .eq("patient_id", patientId)
       .order("updated_at", { ascending: false });
 
@@ -2960,13 +3005,13 @@ async function upsertFormSlipForAppointment(appointmentId) {
   const formSlipMeta = useMemo(() => normalizeRequirements(formSlipReqRow), [formSlipReqRow]);
 
   const formTimeSummary = useMemo(() => {
-    if (formTimeStats.avg == null) return { label: "—" };
-    return { label: `${formTimeStats.avg} mins` };
+    if (formTimeStats.avg7 == null) return { label: "—" };
+    return { label: `${formTimeStats.avg7} mins` };
   }, [formTimeStats]);
 
   const testsTimeSummary = useMemo(() => {
-    if (testsTimeStats.avg == null) return { label: "—" };
-    return { label: `${testsTimeStats.avg} mins` };
+    if (testsTimeStats.avg7 == null) return { label: "—" };
+    return { label: `${testsTimeStats.avg7} mins` };
   }, [testsTimeStats]);
 
   return (
@@ -3125,33 +3170,78 @@ async function upsertFormSlipForAppointment(appointmentId) {
               <div className="analytics-grid">
                 <div className="analytics-panel">
                   <div className="analytics-panel-title">Form Time Average</div>
-                  <DonutChart
-                    value={formTimeStats.avg}
-                    max={formTimeStats.max || formTimeStats.avg || 1}
-                    label="Avg mins"
-                    unit="m"
-                    color="#0f766e"
-                  />
+                  <div className="analytics-donuts">
+                    <div className="analytics-donut">
+                      <DonutChart
+                        value={formTimeStats.avg7}
+                        max={formTimeStats.max7 || formTimeStats.avg7 || 1}
+                        label="7d avg"
+                        unit="m"
+                        color="#0f766e"
+                        size={120}
+                      />
+                    </div>
+                    <div className="analytics-donut">
+                      <DonutChart
+                        value={formTimeStats.avg30}
+                        max={formTimeStats.max30 || formTimeStats.avg30 || 1}
+                        label="30d avg"
+                        unit="m"
+                        color="#0f766e"
+                        size={120}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="analytics-panel">
                   <div className="analytics-panel-title">Medical Tests Average</div>
-                  <DonutChart
-                    value={testsTimeStats.avg}
-                    max={testsTimeStats.max || testsTimeStats.avg || 1}
-                    label="Avg mins"
-                    unit="m"
-                    color="#2563eb"
-                  />
+                  <div className="analytics-donuts">
+                    <div className="analytics-donut">
+                      <DonutChart
+                        value={testsTimeStats.avg7}
+                        max={testsTimeStats.max7 || testsTimeStats.avg7 || 1}
+                        label="7d avg"
+                        unit="m"
+                        color="#2563eb"
+                        size={120}
+                      />
+                    </div>
+                    <div className="analytics-donut">
+                      <DonutChart
+                        value={testsTimeStats.avg30}
+                        max={testsTimeStats.max30 || testsTimeStats.avg30 || 1}
+                        label="30d avg"
+                        unit="m"
+                        color="#2563eb"
+                        size={120}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="analytics-panel">
                   <div className="analytics-panel-title">Weight Average</div>
-                  <DonutChart
-                    value={weightStats.avg}
-                    max={weightStats.max || weightStats.avg || 1}
-                    label="Avg kg"
-                    unit="kg"
-                    color="#f97316"
-                  />
+                  <div className="analytics-donuts">
+                    <div className="analytics-donut">
+                      <DonutChart
+                        value={weightStats.avg7}
+                        max={weightStats.max7 || weightStats.avg7 || 1}
+                        label="7d avg"
+                        unit="kg"
+                        color="#f97316"
+                        size={120}
+                      />
+                    </div>
+                    <div className="analytics-donut">
+                      <DonutChart
+                        value={weightStats.avg30}
+                        max={weightStats.max30 || weightStats.avg30 || 1}
+                        label="30d avg"
+                        unit="kg"
+                        color="#f97316"
+                        size={120}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
