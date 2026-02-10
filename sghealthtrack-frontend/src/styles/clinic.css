@@ -1063,6 +1063,45 @@ body {
   color: var(--text-muted);
 }
 
+.dashboard-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.dashboard-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.dashboard-user-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dashboard-user-role {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.dashboard-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #e6f4f1;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
 .dashboard-search:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(15, 125, 92, 0.12);

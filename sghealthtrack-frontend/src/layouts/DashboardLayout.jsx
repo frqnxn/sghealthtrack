@@ -46,6 +46,8 @@ export default function DashboardLayout({ session, role, onLogout }) {
   const [profileName, setProfileName] = useState("");
   const metaName = session?.user?.user_metadata?.full_name?.trim() || "";
   const userName = metaName || profileName || userEmail;
+  const displayName = String(userName || "").trim();
+  const avatarInitial = (displayName || userEmail || "U").trim().charAt(0).toUpperCase();
   const isPatient = role === "patient";
   const isAdmin = role === "admin";
   const navItems =
@@ -134,6 +136,15 @@ export default function DashboardLayout({ session, role, onLogout }) {
                 aria-label="Search"
               />
               <div id="dashboard-utility-actions" />
+              <div className="dashboard-user">
+                <div className="dashboard-user-info">
+                  <div className="dashboard-user-name">{displayName || "User"}</div>
+                  {roleLabel ? <div className="dashboard-user-role">{roleLabel}</div> : null}
+                </div>
+                <div className="dashboard-user-avatar" aria-hidden="true">
+                  {avatarInitial}
+                </div>
+              </div>
             </div>
           </div>
 
