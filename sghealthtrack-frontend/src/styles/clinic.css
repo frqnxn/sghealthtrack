@@ -2266,6 +2266,40 @@ body {
   font-weight: 700;
   color: var(--text-muted);
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.analytics-trend {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.summary-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.trend-arrow {
+  font-size: 12px;
+}
+
+.trend-up {
+  color: #16a34a;
+}
+
+.trend-down {
+  color: #dc2626;
+}
+
+.trend-flat {
+  color: #64748b;
 }
 
 .line-chart {

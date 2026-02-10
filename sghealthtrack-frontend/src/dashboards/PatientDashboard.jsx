@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../components/ToastCenter";
@@ -1441,15 +1441,25 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   const formTimeSeries = useMemo(() => {
     const map = new Map();
+    const byAppointment = new Map();
     for (const row of requirementsList || []) {
-      const endKey = dayKey(row.form_submitted_at);
+      if (!row?.appointment_id) continue;
+      const start = row.form_started_at || row.created_at;
+      const end = row.form_submitted_at;
+      if (!start || !end) continue;
+      const startMs = new Date(start).getTime();
+      const endMs = new Date(end).getTime();
+      if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) continue;
+      const existing = byAppointment.get(row.appointment_id);
+      if (!existing || endMs > existing.endMs) {
+        byAppointment.set(row.appointment_id, { endMs, durationMs: endMs - startMs });
+      }
+    }
+    for (const { endMs, durationMs } of byAppointment.values()) {
+      const endKey = dayKey(new Date(endMs).toISOString());
       if (!endKey) continue;
       const endDate = new Date(endKey + "T00:00:00");
       if (endDate < analyticsStart) continue;
-      const start = row.form_started_at || row.created_at;
-      if (!start) continue;
-      const durationMs = new Date(row.form_submitted_at).getTime() - new Date(start).getTime();
-      if (!Number.isFinite(durationMs) || durationMs <= 0) continue;
       const mins = Math.round(durationMs / 60000);
       const existing = map.get(endKey) || { sum: 0, count: 0 };
       map.set(endKey, { sum: existing.sum + mins, count: existing.count + 1 });
@@ -1464,26 +1474,44 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   const testsTimeSeries = useMemo(() => {
     const map = new Map();
-    for (const row of stepsList || []) {
-      const start = row.done_at;
-      const end = row.lab_done_at || row.xray_done_at || row.updated_at;
-      const endKey = dayKey(end);
-      if (!start || !endKey) continue;
+    const vitalsByAppt = new Map();
+    const xrayByAppt = new Map();
+
+    for (const row of vitals || []) {
+      if (!row?.appointment_id || !row?.recorded_at) continue;
+      const t = new Date(row.recorded_at).getTime();
+      if (!Number.isFinite(t)) continue;
+      const existing = vitalsByAppt.get(row.appointment_id);
+      if (!existing || t < existing) vitalsByAppt.set(row.appointment_id, t);
+    }
+
+    for (const row of xrayResults || []) {
+      if (!row?.appointment_id) continue;
+      const t = new Date(row.updated_at || row.exam_date || row.created_at || row.recorded_at || "").getTime();
+      if (!Number.isFinite(t)) continue;
+      const existing = xrayByAppt.get(row.appointment_id);
+      if (!existing || t > existing) xrayByAppt.set(row.appointment_id, t);
+    }
+
+    for (const [appointmentId, startMs] of vitalsByAppt.entries()) {
+      const endMs = xrayByAppt.get(appointmentId);
+      if (!endMs || endMs <= startMs) continue;
+      const endKey = dayKey(new Date(endMs).toISOString());
+      if (!endKey) continue;
       const endDate = new Date(endKey + "T00:00:00");
       if (endDate < analyticsStart) continue;
-      const durationMs = new Date(end).getTime() - new Date(start).getTime();
-      if (!Number.isFinite(durationMs) || durationMs <= 0) continue;
-      const mins = Math.round(durationMs / 60000);
+      const mins = Math.round((endMs - startMs) / 60000);
       const existing = map.get(endKey) || { sum: 0, count: 0 };
       map.set(endKey, { sum: existing.sum + mins, count: existing.count + 1 });
     }
+
     const keys = Array.from(map.keys()).sort();
     return keys.map((key) => {
       const v = map.get(key);
       const avg = v.count ? Math.round(v.sum / v.count) : 0;
       return { label: toDisplayDate(key), value: avg };
     });
-  }, [stepsList, analyticsStart]);
+  }, [vitals, xrayResults, analyticsStart]);
 
   const weightSeries = useMemo(() => {
     const rows = (vitals || [])
@@ -1520,6 +1548,39 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   );
 
   const activeMetric = analyticsMetricMap[analyticsMetric] || analyticsMetricMap.form;
+
+  const formTimeAverage = useMemo(() => {
+    if (!formTimeSeries.length) return null;
+    const total = formTimeSeries.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+    return Math.round(total / formTimeSeries.length);
+  }, [formTimeSeries]);
+
+  const testsTimeAverage = useMemo(() => {
+    if (!testsTimeSeries.length) return null;
+    const total = testsTimeSeries.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+    return Math.round(total / testsTimeSeries.length);
+  }, [testsTimeSeries]);
+
+  const weightAverage = useMemo(() => {
+    if (!weightSeries.length) return null;
+    const total = weightSeries.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+    return Math.round((total / weightSeries.length) * 10) / 10;
+  }, [weightSeries]);
+
+  const getTrendFromSeries = useCallback((series) => {
+    if (!series || series.length < 2) return { direction: "flat", label: "No trend" };
+    const prev = Number(series[series.length - 2]?.value) || 0;
+    const curr = Number(series[series.length - 1]?.value) || 0;
+    if (!prev && !curr) return { direction: "flat", label: "No trend" };
+    if (prev === curr) return { direction: "flat", label: "No change" };
+    const diff = curr - prev;
+    const pct = prev ? Math.round((Math.abs(diff) / prev) * 100) : 100;
+    return { direction: diff > 0 ? "up" : "down", label: `${pct}%` };
+  }, []);
+
+  const metricTrend = useMemo(() => getTrendFromSeries(activeMetric.series), [activeMetric.series, getTrendFromSeries]);
+  const formTrend = useMemo(() => getTrendFromSeries(formTimeSeries), [formTimeSeries, getTrendFromSeries]);
+  const testsTrend = useMemo(() => getTrendFromSeries(testsTimeSeries), [testsTimeSeries, getTrendFromSeries]);
 
   function hasLabValue(v) {
     return v !== null && v !== undefined && String(v).trim() !== "";
@@ -2932,67 +2993,18 @@ async function upsertFormSlipForAppointment(appointmentId) {
   const formSlipMeta = useMemo(() => normalizeRequirements(formSlipReqRow), [formSlipReqRow]);
 
   const formTimeSummary = useMemo(() => {
-    const startMs =
-      toMs(reqRow?.form_started_at) ||
-      toMs(reqRow?.created_at) ||
-      toMs(reqRow?.updated_at) ||
-      toMs(activeApprovedAppt?.created_at) ||
-      toMs(activeApprovedAppt?.preferred_date) ||
-      null;
-    const endMs = toMs(reqRow?.form_submitted_at);
-
-    if (!startMs && !endMs) return { label: "—", inProgress: false, status: "No form yet" };
-
-    let safeStart = startMs ?? endMs;
-    const nowMs = Date.now();
-    if (safeStart && safeStart > nowMs && !endMs) safeStart = nowMs;
-    if (endMs && safeStart && endMs < safeStart) safeStart = endMs;
-    if (endMs) {
-      return { label: formatDuration(endMs - safeStart), inProgress: false, status: "Submitted" };
-    }
-
-    return { label: formatDuration(Date.now() - safeStart), inProgress: true, status: "In progress" };
-  }, [reqRow, activeApprovedAppt]);
+    if (formTimeAverage == null) return { label: "—" };
+    return { label: `${formTimeAverage} mins` };
+  }, [formTimeAverage]);
 
   const testsTimeSummary = useMemo(() => {
-    if (!stepsRow) return { label: "—", progress: "" };
-
-    const needsLab = !!normalizedReq?.needs_lab;
-    const needsXray = !!normalizedReq?.needs_xray;
-
-    const triageDoneAt = stepsRow?.done_at || activeVitals?.recorded_at || null;
-    const labDoneAt = stepsRow?.lab_done_at || activeLab?.recorded_at || null;
-    const xrayDoneAt = activeXray?.updated_at || null;
-
-    const triageDone = !!triageDoneAt;
-    const labDone = needsLab ? !!labDoneAt : true;
-    const xrayDone = needsXray ? !!xrayDoneAt : true;
-
-    const totalSteps = 1 + (needsLab ? 1 : 0) + (needsXray ? 1 : 0);
-    const doneSteps =
-      (triageDone ? 1 : 0) + (needsLab ? (labDone ? 1 : 0) : 0) + (needsXray ? (xrayDone ? 1 : 0) : 0);
-
-    if (!triageDoneAt) {
-      return { label: "Not started", progress: `${doneSteps}/${totalSteps}` };
-    }
-
-    const startMs = new Date(triageDoneAt).getTime();
-    if (!Number.isFinite(startMs)) return { label: "—", progress: `${doneSteps}/${totalSteps}` };
-
-    let endMs = startMs;
-    const candidates = [labDoneAt, xrayDoneAt]
-      .filter(Boolean)
-      .map((d) => new Date(d).getTime())
-      .filter((t) => Number.isFinite(t));
-    if (candidates.length) endMs = Math.max(...candidates);
-
-    const doneAll = doneSteps === totalSteps;
-    if (doneAll) {
-      return { label: formatDuration(endMs - startMs), progress: `${doneSteps}/${totalSteps}` };
-    }
-
-    return { label: formatDuration(Date.now() - startMs), progress: `${doneSteps}/${totalSteps}` };
-  }, [stepsRow, normalizedReq, activeVitals, activeLab, activeXray]);
+    const startMs = toMs(activeVitals?.recorded_at);
+    const endMs = toMs(activeXray?.updated_at);
+    if (!startMs) return { label: "—" };
+    if (!endMs) return { label: "Pending" };
+    if (endMs <= startMs) return { label: "—" };
+    return { label: formatDuration(endMs - startMs) };
+  }, [activeVitals, activeXray]);
 
   return (
     <div className="patient-dashboard-content">
@@ -3090,15 +3102,21 @@ async function upsertFormSlipForAppointment(appointmentId) {
                 <div>
                   <div className="summary-label">Form Time</div>
                   <div className="summary-value">{formTimeSummary.label}</div>
-                  <div className="summary-meta">{formTimeSummary.status}</div>
+                  <div className={`summary-trend trend-${formTrend.direction}`}>
+                    <span className="trend-arrow">{formTrend.direction === "up" ? "▲" : formTrend.direction === "down" ? "▼" : "—"}</span>
+                    <span>{formTrend.label}</span>
+                  </div>
                 </div>
               </div>
               <div className="summary-card">
                 <div className="summary-icon">MT</div>
                 <div>
                   <div className="summary-label">Medical Tests Time</div>
-                  <div className="summary-value">{testsTimeSummary.progress || "—"}</div>
-                  <div className="summary-meta">{testsTimeSummary.label}</div>
+                  <div className="summary-value">{testsTimeSummary.label}</div>
+                  <div className={`summary-trend trend-${testsTrend.direction}`}>
+                    <span className="trend-arrow">{testsTrend.direction === "up" ? "▲" : testsTrend.direction === "down" ? "▼" : "—"}</span>
+                    <span>{testsTrend.label}</span>
+                  </div>
                 </div>
               </div>
               <div className="summary-card">
@@ -3148,7 +3166,12 @@ async function upsertFormSlipForAppointment(appointmentId) {
                 </div>
               </div>
               <div className="analytics-panel">
-                <div className="analytics-panel-title">{activeMetric.label}</div>
+                <div className="analytics-panel-title">
+                  <span>{activeMetric.label}</span>
+                  <span className={`analytics-trend trend-${metricTrend.direction}`}>
+                    {metricTrend.direction === "up" ? "▲" : metricTrend.direction === "down" ? "▼" : "—"} {metricTrend.label}
+                  </span>
+                </div>
                 <LineChart data={activeMetric.series} color={activeMetric.color} />
               </div>
             </div>
