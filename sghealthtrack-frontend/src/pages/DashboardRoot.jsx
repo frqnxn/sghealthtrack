@@ -7,6 +7,7 @@ import CashierDashboard from "../dashboards/CashierDashboard";
 import DoctorDashboard from "../dashboards/DoctorDashboard";
 import XrayDashboard from "../dashboards/XrayDashboard";
 import AdminDashboard from "../dashboards/AdminDashboard";
+import ReceptionistDashboard from "../dashboards/ReceptionistDashboard";
 
 const STAFF_MAP = {
   admin: AdminDashboard,
@@ -25,7 +26,7 @@ export default function DashboardRoot() {
   }
 
   if (role === "receptionist") {
-    return <AdminDashboard session={session} page="appointments" />;
+    return <ReceptionistDashboard session={session} />;
   }
 
   const Staff = STAFF_MAP[role];
