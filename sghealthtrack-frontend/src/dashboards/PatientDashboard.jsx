@@ -1273,6 +1273,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   const [activePayment, setActivePayment] = useState(null);
   const [analyticsRange, setAnalyticsRange] = useState("30d");
+  const [analyticsMetric, setAnalyticsMetric] = useState("form");
 
   const [formSlipOpen, setFormSlipOpen] = useState(false);
   const [formSlipConfirmed, setFormSlipConfirmed] = useState(false);
@@ -1496,6 +1497,29 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
       .sort((a, b) => (a.key > b.key ? 1 : -1));
     return rows.map((v) => ({ label: toDisplayDate(v.key), value: v.value }));
   }, [vitals, analyticsStart]);
+
+  const analyticsMetricMap = useMemo(
+    () => ({
+      form: {
+        label: "Form Time (mins)",
+        series: formTimeSeries,
+        color: "#0f766e",
+      },
+      tests: {
+        label: "Medical Tests (mins)",
+        series: testsTimeSeries,
+        color: "#2563eb",
+      },
+      weight: {
+        label: "Weight Trend (kg)",
+        series: weightSeries,
+        color: "#f97316",
+      },
+    }),
+    [formTimeSeries, testsTimeSeries, weightSeries]
+  );
+
+  const activeMetric = analyticsMetricMap[analyticsMetric] || analyticsMetricMap.form;
 
   function hasLabValue(v) {
     return v !== null && v !== undefined && String(v).trim() !== "";
@@ -3102,29 +3126,30 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   <div className="analytics-title">Overall Analytics</div>
                   <div className="section-subtitle">Based on your recorded form and test timelines.</div>
                 </div>
-                <select
-                  className="analytics-filter"
-                  value={analyticsRange}
-                  onChange={(e) => setAnalyticsRange(e.target.value)}
-                >
-                  <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
-                  <option value="90d">Last 90 days</option>
-                </select>
+                <div className="analytics-controls">
+                  <select
+                    className="analytics-filter"
+                    value={analyticsMetric}
+                    onChange={(e) => setAnalyticsMetric(e.target.value)}
+                  >
+                    <option value="form">Form Time</option>
+                    <option value="tests">Medical Tests</option>
+                    <option value="weight">Weight Trend</option>
+                  </select>
+                  <select
+                    className="analytics-filter"
+                    value={analyticsRange}
+                    onChange={(e) => setAnalyticsRange(e.target.value)}
+                  >
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                  </select>
+                </div>
               </div>
-              <div className="analytics-grid">
-                <div className="analytics-panel">
-                  <div className="analytics-panel-title">Form Time (mins)</div>
-                  <LineChart data={formTimeSeries} color="#0f766e" />
-                </div>
-                <div className="analytics-panel">
-                  <div className="analytics-panel-title">Medical Tests (mins)</div>
-                  <LineChart data={testsTimeSeries} color="#2563eb" />
-                </div>
-                <div className="analytics-panel">
-                  <div className="analytics-panel-title">Weight Trend (kg)</div>
-                  <LineChart data={weightSeries} color="#f97316" />
-                </div>
+              <div className="analytics-panel">
+                <div className="analytics-panel-title">{activeMetric.label}</div>
+                <LineChart data={activeMetric.series} color={activeMetric.color} />
               </div>
             </div>
             <HealthProgressDashboard vitals={vitals} />

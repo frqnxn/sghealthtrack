@@ -2227,6 +2227,12 @@ body {
   margin-bottom: 12px;
 }
 
+.analytics-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .analytics-title {
   font-weight: 700;
   font-size: 15px;
