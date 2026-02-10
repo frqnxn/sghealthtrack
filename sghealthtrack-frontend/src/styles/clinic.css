@@ -2333,6 +2333,31 @@ body {
   font-size: 12px;
 }
 
+.donut-chart {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-center {
+  position: absolute;
+  text-align: center;
+  display: grid;
+  gap: 2px;
+}
+
+.donut-value {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.donut-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /* ---------- Appointment calendar + activity ---------- */
 .appointment-grid {
   display: grid;

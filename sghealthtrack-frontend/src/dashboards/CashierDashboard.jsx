@@ -4,7 +4,7 @@ import { useToast } from "../components/ToastCenter";
 import { supabase } from "../lib/supabase";
 import NotificationBell from "../components/NotificationBell";
 import useSuccessToast from "../utils/useSuccessToast";
-import { LineChart } from "../components/LineChart";
+import { DonutChart } from "../components/DonutChart";
 
 /* ---------------- HELPERS ---------------- */
 function startOfDay(d = new Date()) {
@@ -256,7 +256,6 @@ export default function CashierDashboard({ session, page = "payments" }) {
   const [orNumber, setOrNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
-  const [analyticsRange, setAnalyticsRange] = useState("30d");
 
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [gcashReference, setGcashReference] = useState("");
@@ -639,11 +638,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
     });
   }, [reportRows, reportDateFrom, reportDateTo]);
 
-  const analyticsDays = useMemo(() => {
-    if (analyticsRange === "7d") return 7;
-    if (analyticsRange === "90d") return 90;
-    return 30;
-  }, [analyticsRange]);
+  const analyticsDays = 30;
 
   const analyticsStart = useMemo(() => {
     const now = new Date();
@@ -665,6 +660,14 @@ export default function CashierDashboard({ session, page = "payments" }) {
     const keys = Array.from(map.keys()).sort();
     return keys.map((key) => ({ label: toDisplayDate(key), value: map.get(key) }));
   }, [reportRows, analyticsStart]);
+
+  const paymentAverage = useMemo(() => {
+    if (!paymentSeries.length) return { avg: null, max: null };
+    const values = paymentSeries.map((v) => Number(v.value)).filter((v) => Number.isFinite(v));
+    if (!values.length) return { avg: null, max: null };
+    const total = values.reduce((sum, v) => sum + v, 0);
+    return { avg: Math.round(total / values.length), max: Math.max(...values) };
+  }, [paymentSeries]);
 
   const reportSummary = useMemo(() => {
     const now = new Date();
@@ -764,17 +767,19 @@ export default function CashierDashboard({ session, page = "payments" }) {
                 <div className="analytics-title">Payments Volume</div>
                 <div className="section-subtitle">Completed transactions per day.</div>
               </div>
-              <select
-                className="analytics-filter"
-                value={analyticsRange}
-                onChange={(e) => setAnalyticsRange(e.target.value)}
-              >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-              </select>
             </div>
-            <LineChart data={paymentSeries} color="#4338ca" />
+            <div className="analytics-panel" style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+              <div>
+                <div className="analytics-panel-title">Avg payments/day (last 30 days)</div>
+                <DonutChart
+                  value={paymentAverage.avg}
+                  max={paymentAverage.max || paymentAverage.avg || 1}
+                  label="Avg/day"
+                  unit=""
+                  color="#4338ca"
+                />
+              </div>
+            </div>
           </div>
 
           {/* LIST */}

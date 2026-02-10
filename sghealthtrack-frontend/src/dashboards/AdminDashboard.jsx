@@ -9,7 +9,7 @@ import AdminCompanyDetail from "../admin/AdminCompanyDetail";
 import AdminFinancialDashboard from "../dashboards/AdminFinancialDashboard";
 import NotificationBell from "../components/NotificationBell";
 import useSuccessToast from "../utils/useSuccessToast";
-import { LineChart } from "../components/LineChart";
+import { DonutChart } from "../components/DonutChart";
 
 /* =========================================================
    CONFIG (adjust if your schema differs)
@@ -687,7 +687,6 @@ export default function AdminDashboard({ session, page = "appointments" }) {
   // Filters
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [analyticsRange, setAnalyticsRange] = useState("30d");
 
   // Patients summary (view)
   const [patients, setPatients] = useState([]);
@@ -1798,11 +1797,7 @@ export default function AdminDashboard({ session, page = "appointments" }) {
     return { daily, weekly, monthly };
   }, [appointments]);
 
-  const analyticsDays = useMemo(() => {
-    if (analyticsRange === "7d") return 7;
-    if (analyticsRange === "90d") return 90;
-    return 30;
-  }, [analyticsRange]);
+  const analyticsDays = 30;
 
   const analyticsStart = useMemo(() => {
     const now = new Date();
@@ -1824,6 +1819,14 @@ export default function AdminDashboard({ session, page = "appointments" }) {
     const keys = Array.from(map.keys()).sort();
     return keys.map((key) => ({ label: toDisplayDate(key), value: map.get(key) }));
   }, [appointments, analyticsStart]);
+
+  const volumeAverage = useMemo(() => {
+    if (!volumeSeries.length) return { avg: null, max: null };
+    const values = volumeSeries.map((v) => Number(v.value)).filter((v) => Number.isFinite(v));
+    if (!values.length) return { avg: null, max: null };
+    const total = values.reduce((sum, v) => sum + v, 0);
+    return { avg: Math.round(total / values.length), max: Math.max(...values) };
+  }, [volumeSeries]);
 
   /* =========================================================
    * UI
@@ -1859,19 +1862,18 @@ export default function AdminDashboard({ session, page = "appointments" }) {
                   Based on appointment creation timestamps.
                 </div>
               </div>
-              <select
-                className="analytics-filter"
-                value={analyticsRange}
-                onChange={(e) => setAnalyticsRange(e.target.value)}
-              >
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-              </select>
             </div>
-            <div className="analytics-panel" style={{ marginTop: 12 }}>
-              <div className="analytics-panel-title">Appointments per day</div>
-              <LineChart data={volumeSeries} color="#0f766e" />
+            <div className="analytics-panel" style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+              <div>
+                <div className="analytics-panel-title">Avg appointments/day (last 30 days)</div>
+                <DonutChart
+                  value={volumeAverage.avg}
+                  max={volumeAverage.max || volumeAverage.avg || 1}
+                  label="Avg/day"
+                  unit=""
+                  color="#0f766e"
+                />
+              </div>
             </div>
             <div
               className="admin-volume-grid"

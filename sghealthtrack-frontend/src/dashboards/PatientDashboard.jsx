@@ -9,6 +9,7 @@ import { generateMedicalReportPdf } from "../utils/generateMedicalReportPdf";
 import { generateLabSummaryPdf } from "../utils/generateLabSummaryPdf";
 import { generateXraySummaryPdf } from "../utils/generateXraySummaryPdf";
 import useSuccessToast from "../utils/useSuccessToast";
+import { DonutChart } from "../components/DonutChart";
 /* ---------- UI helpers ---------- */
 function Badge({ status }) {
   const raw = (status || "pending").toLowerCase();
@@ -1466,6 +1467,37 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
     return map;
   }, [vitals, xrayResults]);
+
+  const formTimeStats = useMemo(() => {
+    const values = Array.from(formTimeByAppointment.values())
+      .map((row) => Math.round(row.durationMs / 60000))
+      .filter((v) => Number.isFinite(v) && v > 0);
+    if (!values.length) return { avg: null, max: null };
+    const total = values.reduce((sum, v) => sum + v, 0);
+    return { avg: Math.round(total / values.length), max: Math.max(...values) };
+  }, [formTimeByAppointment]);
+
+  const testsTimeStats = useMemo(() => {
+    const values = Array.from(testsTimeByAppointment.values())
+      .map((ms) => Math.round(ms / 60000))
+      .filter((v) => Number.isFinite(v) && v > 0);
+    if (!values.length) return { avg: null, max: null };
+    const total = values.reduce((sum, v) => sum + v, 0);
+    return { avg: Math.round(total / values.length), max: Math.max(...values) };
+  }, [testsTimeByAppointment]);
+
+  const weightStats = useMemo(() => {
+    const values = (vitals || [])
+      .filter((v) => v?.weight_kg != null)
+      .map((v) => Number(v.weight_kg))
+      .filter((v) => Number.isFinite(v) && v > 0);
+    if (!values.length) return { avg: null, max: null };
+    const total = values.reduce((sum, v) => sum + v, 0);
+    return {
+      avg: Math.round((total / values.length) * 10) / 10,
+      max: Math.max(...values),
+    };
+  }, [vitals]);
 
   const sortedAppointmentsByDate = useMemo(() => {
     const rows = (appointments || [])
@@ -2928,14 +2960,14 @@ async function upsertFormSlipForAppointment(appointmentId) {
   const formSlipMeta = useMemo(() => normalizeRequirements(formSlipReqRow), [formSlipReqRow]);
 
   const formTimeSummary = useMemo(() => {
-    if (formAppointmentStats.current == null) return { label: "—" };
-    return { label: `${formAppointmentStats.current} mins` };
-  }, [formAppointmentStats]);
+    if (formTimeStats.avg == null) return { label: "—" };
+    return { label: `${formTimeStats.avg} mins` };
+  }, [formTimeStats]);
 
   const testsTimeSummary = useMemo(() => {
-    if (testsAppointmentStats.current == null) return { label: "—" };
-    return { label: `${testsAppointmentStats.current} mins` };
-  }, [testsAppointmentStats]);
+    if (testsTimeStats.avg == null) return { label: "—" };
+    return { label: `${testsTimeStats.avg} mins` };
+  }, [testsTimeStats]);
 
   return (
     <div className="patient-dashboard-content">
@@ -3080,6 +3112,46 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   <div className="summary-label">Latest Report</div>
                   <div className="summary-value">{latestReportSummary.label}</div>
                   <div className="summary-meta">{latestReportSummary.meta}</div>
+                </div>
+              </div>
+            </div>
+            <div className="card analytics-card" style={{ marginTop: 16 }}>
+              <div className="analytics-header">
+                <div>
+                  <div className="analytics-title">Patient Averages</div>
+                  <div className="section-subtitle">Per appointment averages and overall trends.</div>
+                </div>
+              </div>
+              <div className="analytics-grid">
+                <div className="analytics-panel">
+                  <div className="analytics-panel-title">Form Time Average</div>
+                  <DonutChart
+                    value={formTimeStats.avg}
+                    max={formTimeStats.max || formTimeStats.avg || 1}
+                    label="Avg mins"
+                    unit="m"
+                    color="#0f766e"
+                  />
+                </div>
+                <div className="analytics-panel">
+                  <div className="analytics-panel-title">Medical Tests Average</div>
+                  <DonutChart
+                    value={testsTimeStats.avg}
+                    max={testsTimeStats.max || testsTimeStats.avg || 1}
+                    label="Avg mins"
+                    unit="m"
+                    color="#2563eb"
+                  />
+                </div>
+                <div className="analytics-panel">
+                  <div className="analytics-panel-title">Weight Average</div>
+                  <DonutChart
+                    value={weightStats.avg}
+                    max={weightStats.max || weightStats.avg || 1}
+                    label="Avg kg"
+                    unit="kg"
+                    color="#f97316"
+                  />
                 </div>
               </div>
             </div>
