@@ -2213,6 +2213,80 @@ body {
   gap: 12px;
 }
 
+/* ---------- Analytics charts ---------- */
+.analytics-card {
+  padding: 16px;
+  border-radius: 16px;
+}
+
+.analytics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.analytics-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.analytics-filter {
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #ffffff;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.analytics-panel {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.analytics-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.line-chart {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+}
+
+.line-chart svg {
+  width: 100%;
+}
+
+.line-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.chart-empty {
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* ---------- Appointment calendar + activity ---------- */
 .appointment-grid {
   display: grid;

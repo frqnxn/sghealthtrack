@@ -9,6 +9,7 @@ import { generateMedicalReportPdf } from "../utils/generateMedicalReportPdf";
 import { generateLabSummaryPdf } from "../utils/generateLabSummaryPdf";
 import { generateXraySummaryPdf } from "../utils/generateXraySummaryPdf";
 import useSuccessToast from "../utils/useSuccessToast";
+import { LineChart } from "../components/LineChart";
 
 
 /* ---------- UI helpers ---------- */
@@ -127,6 +128,20 @@ function validatePassword(value) {
   if (!/[A-Z]/.test(value)) return "Password must include an uppercase letter.";
   if (!/[0-9]/.test(value)) return "Password must include a number.";
   return "";
+}
+
+function dayKey(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function toDisplayDate(key) {
+  if (!key) return "";
+  const d = new Date(key + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return key;
+  return d.toLocaleDateString();
 }
 
 function HealthProgressDashboard({ vitals }) {
@@ -1239,6 +1254,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   const [doctorReport, setDoctorReport] = useState(null);
   const [requirementsByAppt, setRequirementsByAppt] = useState({});
   const [pendingReqRow, setPendingReqRow] = useState(null);
+  const [requirementsList, setRequirementsList] = useState([]);
+  const [stepsList, setStepsList] = useState([]);
 
   // ✅ booking lock state
   const [latestAppt, setLatestAppt] = useState(null);
@@ -1255,6 +1272,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   const [newPassword, setNewPassword] = useState("");
 
   const [activePayment, setActivePayment] = useState(null);
+  const [analyticsRange, setAnalyticsRange] = useState("30d");
 
   const [formSlipOpen, setFormSlipOpen] = useState(false);
   const [formSlipConfirmed, setFormSlipConfirmed] = useState(false);
@@ -1405,6 +1423,79 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     ].filter((item) => item.value && item.value !== "—");
     return items.slice(0, 2);
   }, [latestLabSummary]);
+
+  const analyticsDays = useMemo(() => {
+    if (analyticsRange === "7d") return 7;
+    if (analyticsRange === "90d") return 90;
+    return 30;
+  }, [analyticsRange]);
+
+  const analyticsStart = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - (analyticsDays - 1));
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }, [analyticsDays]);
+
+  const formTimeSeries = useMemo(() => {
+    const map = new Map();
+    for (const row of requirementsList || []) {
+      const endKey = dayKey(row.form_submitted_at);
+      if (!endKey) continue;
+      const endDate = new Date(endKey + "T00:00:00");
+      if (endDate < analyticsStart) continue;
+      const start = row.form_started_at || row.created_at;
+      if (!start) continue;
+      const durationMs = new Date(row.form_submitted_at).getTime() - new Date(start).getTime();
+      if (!Number.isFinite(durationMs) || durationMs <= 0) continue;
+      const mins = Math.round(durationMs / 60000);
+      const existing = map.get(endKey) || { sum: 0, count: 0 };
+      map.set(endKey, { sum: existing.sum + mins, count: existing.count + 1 });
+    }
+    const keys = Array.from(map.keys()).sort();
+    return keys.map((key) => {
+      const v = map.get(key);
+      const avg = v.count ? Math.round(v.sum / v.count) : 0;
+      return { label: toDisplayDate(key), value: avg };
+    });
+  }, [requirementsList, analyticsStart]);
+
+  const testsTimeSeries = useMemo(() => {
+    const map = new Map();
+    for (const row of stepsList || []) {
+      const start = row.done_at;
+      const end = row.lab_done_at || row.xray_done_at || row.updated_at;
+      const endKey = dayKey(end);
+      if (!start || !endKey) continue;
+      const endDate = new Date(endKey + "T00:00:00");
+      if (endDate < analyticsStart) continue;
+      const durationMs = new Date(end).getTime() - new Date(start).getTime();
+      if (!Number.isFinite(durationMs) || durationMs <= 0) continue;
+      const mins = Math.round(durationMs / 60000);
+      const existing = map.get(endKey) || { sum: 0, count: 0 };
+      map.set(endKey, { sum: existing.sum + mins, count: existing.count + 1 });
+    }
+    const keys = Array.from(map.keys()).sort();
+    return keys.map((key) => {
+      const v = map.get(key);
+      const avg = v.count ? Math.round(v.sum / v.count) : 0;
+      return { label: toDisplayDate(key), value: avg };
+    });
+  }, [stepsList, analyticsStart]);
+
+  const weightSeries = useMemo(() => {
+    const rows = (vitals || [])
+      .filter((v) => v?.recorded_at && v?.weight_kg != null)
+      .map((v) => ({
+        key: dayKey(v.recorded_at),
+        value: Number(v.weight_kg),
+      }))
+      .filter((v) => v.key && Number.isFinite(v.value))
+      .filter((v) => new Date(v.key + "T00:00:00") >= analyticsStart)
+      .sort((a, b) => (a.key > b.key ? 1 : -1));
+    return rows.map((v) => ({ label: toDisplayDate(v.key), value: v.value }));
+  }, [vitals, analyticsStart]);
 
   function hasLabValue(v) {
     return v !== null && v !== undefined && String(v).trim() !== "";
@@ -2149,7 +2240,13 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
       .eq("patient_id", patientId)
       .order("recorded_at", { ascending: false });
 
-    const errors = [a.error, v.error, l.error, xr.error, p.error].filter(Boolean);
+    const st = await supabase
+      .from("appointment_steps")
+      .select("appointment_id, patient_id, done_at, lab_done_at, xray_done_at, updated_at")
+      .eq("patient_id", patientId)
+      .order("updated_at", { ascending: false });
+
+    const errors = [a.error, v.error, l.error, xr.error, p.error, st.error].filter(Boolean);
     if (errors.length) setMsg(errors[0].message);
 
     setAppointments(a.data || []);
@@ -2157,6 +2254,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     setLabs(l.data || []);
     setXrayResults(xr.data || []);
     setPayments(p.data || []);
+    setStepsList(st.data || []);
 
     if ((a.data || []).length > 0) {
       const ids = (a.data || []).map((row) => row.id).filter(Boolean);
@@ -2165,6 +2263,9 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
         .select(
           [
             "appointment_id",
+            "created_at",
+            "form_started_at",
+            "form_submitted_at",
             "lab_custom_items",
             "xray_custom_items",
             "exam_physical",
@@ -2190,8 +2291,10 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
         map[r.appointment_id] = r;
       });
       setRequirementsByAppt(map);
+      setRequirementsList(reqs || []);
     } else {
       setRequirementsByAppt({});
+      setRequirementsList([]);
     }
 
     await loadProfile();
@@ -2990,6 +3093,37 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   <div className="summary-label">Latest Report</div>
                   <div className="summary-value">{latestReportSummary.label}</div>
                   <div className="summary-meta">{latestReportSummary.meta}</div>
+                </div>
+              </div>
+            </div>
+            <div className="card analytics-card" style={{ marginTop: 16 }}>
+              <div className="analytics-header">
+                <div>
+                  <div className="analytics-title">Overall Analytics</div>
+                  <div className="section-subtitle">Based on your recorded form and test timelines.</div>
+                </div>
+                <select
+                  className="analytics-filter"
+                  value={analyticsRange}
+                  onChange={(e) => setAnalyticsRange(e.target.value)}
+                >
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="90d">Last 90 days</option>
+                </select>
+              </div>
+              <div className="analytics-grid">
+                <div className="analytics-panel">
+                  <div className="analytics-panel-title">Form Time (mins)</div>
+                  <LineChart data={formTimeSeries} color="#0f766e" />
+                </div>
+                <div className="analytics-panel">
+                  <div className="analytics-panel-title">Medical Tests (mins)</div>
+                  <LineChart data={testsTimeSeries} color="#2563eb" />
+                </div>
+                <div className="analytics-panel">
+                  <div className="analytics-panel-title">Weight Trend (kg)</div>
+                  <LineChart data={weightSeries} color="#f97316" />
                 </div>
               </div>
             </div>

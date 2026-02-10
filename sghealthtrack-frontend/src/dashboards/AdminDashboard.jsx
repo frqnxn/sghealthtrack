@@ -9,6 +9,7 @@ import AdminCompanyDetail from "../admin/AdminCompanyDetail";
 import AdminFinancialDashboard from "../dashboards/AdminFinancialDashboard";
 import NotificationBell from "../components/NotificationBell";
 import useSuccessToast from "../utils/useSuccessToast";
+import { LineChart } from "../components/LineChart";
 
 /* =========================================================
    CONFIG (adjust if your schema differs)
@@ -38,6 +39,20 @@ function validatePassword(value) {
   return "";
 }
 const PATIENT_PROFILE_SOFT_DELETE_FIELD = "is_deleted";
+
+function dayKey(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function toDisplayDate(key) {
+  if (!key) return "";
+  const d = new Date(key + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return key;
+  return d.toLocaleDateString();
+}
 
 /* ---------------------------------------------------------
    Small helpers
@@ -672,6 +687,7 @@ export default function AdminDashboard({ session, page = "appointments" }) {
   // Filters
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [analyticsRange, setAnalyticsRange] = useState("30d");
 
   // Patients summary (view)
   const [patients, setPatients] = useState([]);
@@ -1782,6 +1798,33 @@ export default function AdminDashboard({ session, page = "appointments" }) {
     return { daily, weekly, monthly };
   }, [appointments]);
 
+  const analyticsDays = useMemo(() => {
+    if (analyticsRange === "7d") return 7;
+    if (analyticsRange === "90d") return 90;
+    return 30;
+  }, [analyticsRange]);
+
+  const analyticsStart = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - (analyticsDays - 1));
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }, [analyticsDays]);
+
+  const volumeSeries = useMemo(() => {
+    const map = new Map();
+    for (const a of appointments || []) {
+      const key = dayKey(a?.created_at);
+      if (!key) continue;
+      const d = new Date(key + "T00:00:00");
+      if (d < analyticsStart) continue;
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    const keys = Array.from(map.keys()).sort();
+    return keys.map((key) => ({ label: toDisplayDate(key), value: map.get(key) }));
+  }, [appointments, analyticsStart]);
+
   /* =========================================================
    * UI
    * ========================================================= */
@@ -1809,9 +1852,26 @@ export default function AdminDashboard({ session, page = "appointments" }) {
         {tab === "appointments" && (
             <>
           <div className="card" style={{ marginTop: 12 }}>
-            <h4 style={{ marginTop: 0, marginBottom: 6 }}>Patient Volume</h4>
-            <div style={{ opacity: 0.75, fontSize: 13 }}>
-              Based on appointment creation timestamps.
+            <div className="analytics-header">
+              <div>
+                <h4 style={{ marginTop: 0, marginBottom: 6 }}>Patient Volume</h4>
+                <div style={{ opacity: 0.75, fontSize: 13 }}>
+                  Based on appointment creation timestamps.
+                </div>
+              </div>
+              <select
+                className="analytics-filter"
+                value={analyticsRange}
+                onChange={(e) => setAnalyticsRange(e.target.value)}
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+              </select>
+            </div>
+            <div className="analytics-panel" style={{ marginTop: 12 }}>
+              <div className="analytics-panel-title">Appointments per day</div>
+              <LineChart data={volumeSeries} color="#0f766e" />
             </div>
             <div
               className="admin-volume-grid"

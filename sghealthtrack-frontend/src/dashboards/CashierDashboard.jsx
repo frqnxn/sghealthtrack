@@ -4,6 +4,7 @@ import { useToast } from "../components/ToastCenter";
 import { supabase } from "../lib/supabase";
 import NotificationBell from "../components/NotificationBell";
 import useSuccessToast from "../utils/useSuccessToast";
+import { LineChart } from "../components/LineChart";
 
 /* ---------------- HELPERS ---------------- */
 function startOfDay(d = new Date()) {
@@ -38,6 +39,20 @@ function sanitizeAmountInput(value) {
 }
 function sanitizeRefInput(value) {
   return String(value || "").replace(/[^a-zA-Z0-9-]/g, "").trim();
+}
+
+function dayKey(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function toDisplayDate(key) {
+  if (!key) return "";
+  const d = new Date(key + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return key;
+  return d.toLocaleDateString();
 }
 const PACKAGE_PRICES = {
   A: 900,
@@ -241,6 +256,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
   const [orNumber, setOrNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const [analyticsRange, setAnalyticsRange] = useState("30d");
 
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [gcashReference, setGcashReference] = useState("");
@@ -623,6 +639,33 @@ export default function CashierDashboard({ session, page = "payments" }) {
     });
   }, [reportRows, reportDateFrom, reportDateTo]);
 
+  const analyticsDays = useMemo(() => {
+    if (analyticsRange === "7d") return 7;
+    if (analyticsRange === "90d") return 90;
+    return 30;
+  }, [analyticsRange]);
+
+  const analyticsStart = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - (analyticsDays - 1));
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }, [analyticsDays]);
+
+  const paymentSeries = useMemo(() => {
+    const map = new Map();
+    for (const row of reportRows || []) {
+      const key = dayKey(row.recorded_at);
+      if (!key) continue;
+      const d = new Date(key + "T00:00:00");
+      if (d < analyticsStart) continue;
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    const keys = Array.from(map.keys()).sort();
+    return keys.map((key) => ({ label: toDisplayDate(key), value: map.get(key) }));
+  }, [reportRows, analyticsStart]);
+
   const reportSummary = useMemo(() => {
     const now = new Date();
     const todayStart = startOfDay(now);
@@ -715,6 +758,25 @@ export default function CashierDashboard({ session, page = "payments" }) {
       {/* ================= TAB: PAYMENTS ================= */}
       {tab === "payments" && (
         <>
+          <div className="card analytics-card" style={{ marginTop: 12 }}>
+            <div className="analytics-header">
+              <div>
+                <div className="analytics-title">Payments Volume</div>
+                <div className="section-subtitle">Completed transactions per day.</div>
+              </div>
+              <select
+                className="analytics-filter"
+                value={analyticsRange}
+                onChange={(e) => setAnalyticsRange(e.target.value)}
+              >
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+              </select>
+            </div>
+            <LineChart data={paymentSeries} color="#4338ca" />
+          </div>
+
           {/* LIST */}
           <div className="card" style={{ marginTop: 12 }}>
             <div
