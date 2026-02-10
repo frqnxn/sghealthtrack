@@ -28,10 +28,12 @@ function isValidContact(raw) {
 }
 
 function validatePassword(value) {
-  if (!value || value.length < 8) return "Password must be at least 8 characters.";
+  if (!value || value.length < 12) return "Password must be at least 12 characters.";
+  if (/\s/.test(value)) return "Password must not contain spaces.";
   if (!/[a-z]/.test(value)) return "Password must include a lowercase letter.";
   if (!/[A-Z]/.test(value)) return "Password must include an uppercase letter.";
   if (!/[0-9]/.test(value)) return "Password must include a number.";
+  if (!/[^\w\s]/.test(value)) return "Password must include a symbol.";
   return "";
 }
 
