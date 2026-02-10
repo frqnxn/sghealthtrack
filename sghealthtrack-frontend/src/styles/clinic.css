@@ -1010,11 +1010,11 @@ body {
 
 .dashboard-utility {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-height: var(--topbar-height);
-  padding: 10px 24px 12px;
+  height: var(--topbar-height);
+  padding: 0 24px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
@@ -1023,7 +1023,7 @@ body {
 
 .dashboard-utility-left {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   flex: 1 1 auto;
   min-width: 0;
@@ -1031,7 +1031,7 @@ body {
 
 .dashboard-utility-right {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   margin-left: auto;
   flex: 0 0 auto;
@@ -1040,7 +1040,7 @@ body {
 }
 
 .dashboard-utility-right > * {
-  align-self: flex-start;
+  align-self: center;
 }
 
 .btn-hamburger {
@@ -1064,7 +1064,7 @@ body {
   flex: 1 1 320px;
   max-width: 520px;
   width: 100%;
-  height: 36px;
+  height: 40px;
   padding: 8px 12px;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -1081,14 +1081,14 @@ body {
 
 #dashboard-utility-actions {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  height: 32px;
+  height: 40px;
 }
 
 .dashboard-user {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding-left: 12px;
   border-left: 1px solid var(--border);
@@ -2843,8 +2843,8 @@ body {
 .notif-wrapper {
   position: relative;
   display: flex;
-  align-items: flex-start;
-  height: 32px;
+  align-items: center;
+  height: 40px;
 }
 
 .notif-button {
