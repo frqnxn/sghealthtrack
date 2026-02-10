@@ -1028,6 +1028,7 @@ body {
   gap: 12px;
   flex: 1 1 auto;
   min-width: 0;
+  height: 100%;
 }
 
 .dashboard-utility-right {
@@ -1039,6 +1040,7 @@ body {
   justify-content: flex-end;
   flex-wrap: nowrap;
   min-height: var(--topbar-height);
+  height: 100%;
 }
 
 .dashboard-utility-right > * {
@@ -1101,18 +1103,20 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .dashboard-user-name {
   font-weight: 700;
   font-size: 13px;
   color: var(--text);
+  line-height: 1;
 }
 
 .dashboard-user-role {
   font-size: 11px;
   color: var(--text-muted);
+  line-height: 1;
 }
 
 .dashboard-user-avatar {
