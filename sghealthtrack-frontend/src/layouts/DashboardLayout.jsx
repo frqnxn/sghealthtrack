@@ -38,6 +38,17 @@ const LAB_ROUTES = [
 
 const STAFF_ROUTES = [{ path: "/dashboard", label: "Dashboard" }];
 
+function formatRoleLabel(role) {
+  const s = String(role || "").toLowerCase();
+  if (s === "cashier") return "Cashier";
+  if (s === "admin") return "Admin";
+  if (s === "doctor") return "Doctor";
+  if (s === "patient") return "Patient";
+  if (s === "lab") return "Lab";
+  if (s === "nurse") return "Nurse";
+  return s.replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 export default function DashboardLayout({ session, role, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [toast, setToast] = useState(null);
@@ -48,6 +59,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
   const userName = metaName || profileName || userEmail;
   const displayName = String(userName || "").trim();
   const avatarInitial = (displayName || userEmail || "U").trim().charAt(0).toUpperCase();
+  const roleLabel = formatRoleLabel(role);
   const isPatient = role === "patient";
   const isAdmin = role === "admin";
   const navItems =
