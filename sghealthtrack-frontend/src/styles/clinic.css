@@ -2286,6 +2286,12 @@ body {
   margin-top: 4px;
 }
 
+.summary-trend-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 .trend-arrow {
   font-size: 12px;
 }

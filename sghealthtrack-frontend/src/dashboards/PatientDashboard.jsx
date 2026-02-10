@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../components/ToastCenter";
@@ -9,9 +9,6 @@ import { generateMedicalReportPdf } from "../utils/generateMedicalReportPdf";
 import { generateLabSummaryPdf } from "../utils/generateLabSummaryPdf";
 import { generateXraySummaryPdf } from "../utils/generateXraySummaryPdf";
 import useSuccessToast from "../utils/useSuccessToast";
-import { LineChart } from "../components/LineChart";
-
-
 /* ---------- UI helpers ---------- */
 function Badge({ status }) {
   const raw = (status || "pending").toLowerCase();
@@ -1272,9 +1269,6 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   const [newPassword, setNewPassword] = useState("");
 
   const [activePayment, setActivePayment] = useState(null);
-  const [analyticsRange, setAnalyticsRange] = useState("30d");
-  const [analyticsMetric, setAnalyticsMetric] = useState("form");
-
   const [formSlipOpen, setFormSlipOpen] = useState(false);
   const [formSlipConfirmed, setFormSlipConfirmed] = useState(false);
   const [formSlipSaving, setFormSlipSaving] = useState(false);
@@ -1425,23 +1419,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     return items.slice(0, 2);
   }, [latestLabSummary]);
 
-  const analyticsDays = useMemo(() => {
-    if (analyticsRange === "7d") return 7;
-    if (analyticsRange === "90d") return 90;
-    return 30;
-  }, [analyticsRange]);
-
-  const analyticsStart = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setDate(start.getDate() - (analyticsDays - 1));
-    start.setHours(0, 0, 0, 0);
-    return start;
-  }, [analyticsDays]);
-
-  const formTimeSeries = useMemo(() => {
+  const formTimeByAppointment = useMemo(() => {
     const map = new Map();
-    const byAppointment = new Map();
     for (const row of requirementsList || []) {
       if (!row?.appointment_id) continue;
       const start = row.form_started_at || row.created_at;
@@ -1450,29 +1429,15 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
       const startMs = new Date(start).getTime();
       const endMs = new Date(end).getTime();
       if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) continue;
-      const existing = byAppointment.get(row.appointment_id);
+      const existing = map.get(row.appointment_id);
       if (!existing || endMs > existing.endMs) {
-        byAppointment.set(row.appointment_id, { endMs, durationMs: endMs - startMs });
+        map.set(row.appointment_id, { endMs, durationMs: endMs - startMs });
       }
     }
-    for (const { endMs, durationMs } of byAppointment.values()) {
-      const endKey = dayKey(new Date(endMs).toISOString());
-      if (!endKey) continue;
-      const endDate = new Date(endKey + "T00:00:00");
-      if (endDate < analyticsStart) continue;
-      const mins = Math.round(durationMs / 60000);
-      const existing = map.get(endKey) || { sum: 0, count: 0 };
-      map.set(endKey, { sum: existing.sum + mins, count: existing.count + 1 });
-    }
-    const keys = Array.from(map.keys()).sort();
-    return keys.map((key) => {
-      const v = map.get(key);
-      const avg = v.count ? Math.round(v.sum / v.count) : 0;
-      return { label: toDisplayDate(key), value: avg };
-    });
-  }, [requirementsList, analyticsStart]);
+    return map;
+  }, [requirementsList]);
 
-  const testsTimeSeries = useMemo(() => {
+  const testsTimeByAppointment = useMemo(() => {
     const map = new Map();
     const vitalsByAppt = new Map();
     const xrayByAppt = new Map();
@@ -1496,91 +1461,61 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     for (const [appointmentId, startMs] of vitalsByAppt.entries()) {
       const endMs = xrayByAppt.get(appointmentId);
       if (!endMs || endMs <= startMs) continue;
-      const endKey = dayKey(new Date(endMs).toISOString());
-      if (!endKey) continue;
-      const endDate = new Date(endKey + "T00:00:00");
-      if (endDate < analyticsStart) continue;
-      const mins = Math.round((endMs - startMs) / 60000);
-      const existing = map.get(endKey) || { sum: 0, count: 0 };
-      map.set(endKey, { sum: existing.sum + mins, count: existing.count + 1 });
+      map.set(appointmentId, endMs - startMs);
     }
 
-    const keys = Array.from(map.keys()).sort();
-    return keys.map((key) => {
-      const v = map.get(key);
-      const avg = v.count ? Math.round(v.sum / v.count) : 0;
-      return { label: toDisplayDate(key), value: avg };
-    });
-  }, [vitals, xrayResults, analyticsStart]);
+    return map;
+  }, [vitals, xrayResults]);
 
-  const weightSeries = useMemo(() => {
-    const rows = (vitals || [])
-      .filter((v) => v?.recorded_at && v?.weight_kg != null)
-      .map((v) => ({
-        key: dayKey(v.recorded_at),
-        value: Number(v.weight_kg),
+  const sortedAppointmentsByDate = useMemo(() => {
+    const rows = (appointments || [])
+      .filter((row) => row?.id)
+      .map((row) => ({
+        id: row.id,
+        date: toMs(row.scheduled_at) || toMs(row.preferred_date) || toMs(row.updated_at) || 0,
       }))
-      .filter((v) => v.key && Number.isFinite(v.value))
-      .filter((v) => new Date(v.key + "T00:00:00") >= analyticsStart)
-      .sort((a, b) => (a.key > b.key ? 1 : -1));
-    return rows.map((v) => ({ label: toDisplayDate(v.key), value: v.value }));
-  }, [vitals, analyticsStart]);
+      .filter((row) => row.date)
+      .sort((a, b) => a.date - b.date);
+    return rows;
+  }, [appointments]);
 
-  const analyticsMetricMap = useMemo(
-    () => ({
-      form: {
-        label: "Form Time (mins)",
-        series: formTimeSeries,
-        color: "#0f766e",
-      },
-      tests: {
-        label: "Medical Tests (mins)",
-        series: testsTimeSeries,
-        color: "#2563eb",
-      },
-      weight: {
-        label: "Weight Trend (kg)",
-        series: weightSeries,
-        color: "#f97316",
-      },
-    }),
-    [formTimeSeries, testsTimeSeries, weightSeries]
-  );
-
-  const activeMetric = analyticsMetricMap[analyticsMetric] || analyticsMetricMap.form;
-
-  const formTimeAverage = useMemo(() => {
-    if (!formTimeSeries.length) return null;
-    const total = formTimeSeries.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
-    return Math.round(total / formTimeSeries.length);
-  }, [formTimeSeries]);
-
-  const testsTimeAverage = useMemo(() => {
-    if (!testsTimeSeries.length) return null;
-    const total = testsTimeSeries.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
-    return Math.round(total / testsTimeSeries.length);
-  }, [testsTimeSeries]);
-
-  const weightAverage = useMemo(() => {
-    if (!weightSeries.length) return null;
-    const total = weightSeries.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
-    return Math.round((total / weightSeries.length) * 10) / 10;
-  }, [weightSeries]);
-
-  const getTrendFromSeries = useCallback((series) => {
-    if (!series || series.length < 2) return { direction: "flat", label: "No trend" };
-    const prev = Number(series[series.length - 2]?.value) || 0;
-    const curr = Number(series[series.length - 1]?.value) || 0;
-    if (!prev && !curr) return { direction: "flat", label: "No trend" };
-    if (prev === curr) return { direction: "flat", label: "No change" };
-    const diff = curr - prev;
-    const pct = prev ? Math.round((Math.abs(diff) / prev) * 100) : 100;
+  const getTrendFromValues = (current, previous) => {
+    if (!Number.isFinite(current) || !Number.isFinite(previous)) return { direction: "flat", label: "No trend" };
+    if (current === previous) return { direction: "flat", label: "No change" };
+    const diff = current - previous;
+    const pct = previous ? Math.round((Math.abs(diff) / previous) * 100) : 100;
     return { direction: diff > 0 ? "up" : "down", label: `${pct}%` };
-  }, []);
+  };
 
-  const metricTrend = useMemo(() => getTrendFromSeries(activeMetric.series), [activeMetric.series, getTrendFromSeries]);
-  const formTrend = useMemo(() => getTrendFromSeries(formTimeSeries), [formTimeSeries, getTrendFromSeries]);
-  const testsTrend = useMemo(() => getTrendFromSeries(testsTimeSeries), [testsTimeSeries, getTrendFromSeries]);
+  const formAppointmentStats = useMemo(() => {
+    const ids = sortedAppointmentsByDate.map((row) => row.id);
+    if (!ids.length) return { current: null, trend: { direction: "flat", label: "No trend" } };
+    const lastId = ids[ids.length - 1];
+    const prevId = ids[ids.length - 2];
+    const last = formTimeByAppointment.get(lastId);
+    const prev = prevId ? formTimeByAppointment.get(prevId) : null;
+    const current = last ? Math.round(last.durationMs / 60000) : null;
+    const previous = prev ? Math.round(prev.durationMs / 60000) : null;
+    return {
+      current,
+      trend: getTrendFromValues(current, previous),
+    };
+  }, [sortedAppointmentsByDate, formTimeByAppointment]);
+
+  const testsAppointmentStats = useMemo(() => {
+    const ids = sortedAppointmentsByDate.map((row) => row.id);
+    if (!ids.length) return { current: null, trend: { direction: "flat", label: "No trend" } };
+    const lastId = ids[ids.length - 1];
+    const prevId = ids[ids.length - 2];
+    const last = testsTimeByAppointment.get(lastId);
+    const prev = prevId ? testsTimeByAppointment.get(prevId) : null;
+    const current = Number.isFinite(last) ? Math.round(last / 60000) : null;
+    const previous = Number.isFinite(prev) ? Math.round(prev / 60000) : null;
+    return {
+      current,
+      trend: getTrendFromValues(current, previous),
+    };
+  }, [sortedAppointmentsByDate, testsTimeByAppointment]);
 
   function hasLabValue(v) {
     return v !== null && v !== undefined && String(v).trim() !== "";
@@ -2993,18 +2928,14 @@ async function upsertFormSlipForAppointment(appointmentId) {
   const formSlipMeta = useMemo(() => normalizeRequirements(formSlipReqRow), [formSlipReqRow]);
 
   const formTimeSummary = useMemo(() => {
-    if (formTimeAverage == null) return { label: "—" };
-    return { label: `${formTimeAverage} mins` };
-  }, [formTimeAverage]);
+    if (formAppointmentStats.current == null) return { label: "—" };
+    return { label: `${formAppointmentStats.current} mins` };
+  }, [formAppointmentStats]);
 
   const testsTimeSummary = useMemo(() => {
-    const startMs = toMs(activeVitals?.recorded_at);
-    const endMs = toMs(activeXray?.updated_at);
-    if (!startMs) return { label: "—" };
-    if (!endMs) return { label: "Pending" };
-    if (endMs <= startMs) return { label: "—" };
-    return { label: formatDuration(endMs - startMs) };
-  }, [activeVitals, activeXray]);
+    if (testsAppointmentStats.current == null) return { label: "—" };
+    return { label: `${testsAppointmentStats.current} mins` };
+  }, [testsAppointmentStats]);
 
   return (
     <div className="patient-dashboard-content">
@@ -3102,10 +3033,17 @@ async function upsertFormSlipForAppointment(appointmentId) {
                 <div>
                   <div className="summary-label">Form Time</div>
                   <div className="summary-value">{formTimeSummary.label}</div>
-                  <div className={`summary-trend trend-${formTrend.direction}`}>
-                    <span className="trend-arrow">{formTrend.direction === "up" ? "▲" : formTrend.direction === "down" ? "▼" : "—"}</span>
-                    <span>{formTrend.label}</span>
+                  <div className={`summary-trend trend-${formAppointmentStats.trend.direction}`}>
+                    <span className="trend-arrow">
+                      {formAppointmentStats.trend.direction === "up"
+                        ? "▲"
+                        : formAppointmentStats.trend.direction === "down"
+                        ? "▼"
+                        : "—"}
+                    </span>
+                    <span>{formAppointmentStats.trend.label}</span>
                   </div>
+                  <div className="summary-trend-note">vs previous appointment</div>
                 </div>
               </div>
               <div className="summary-card">
@@ -3113,10 +3051,17 @@ async function upsertFormSlipForAppointment(appointmentId) {
                 <div>
                   <div className="summary-label">Medical Tests Time</div>
                   <div className="summary-value">{testsTimeSummary.label}</div>
-                  <div className={`summary-trend trend-${testsTrend.direction}`}>
-                    <span className="trend-arrow">{testsTrend.direction === "up" ? "▲" : testsTrend.direction === "down" ? "▼" : "—"}</span>
-                    <span>{testsTrend.label}</span>
+                  <div className={`summary-trend trend-${testsAppointmentStats.trend.direction}`}>
+                    <span className="trend-arrow">
+                      {testsAppointmentStats.trend.direction === "up"
+                        ? "▲"
+                        : testsAppointmentStats.trend.direction === "down"
+                        ? "▼"
+                        : "—"}
+                    </span>
+                    <span>{testsAppointmentStats.trend.label}</span>
                   </div>
+                  <div className="summary-trend-note">vs previous appointment</div>
                 </div>
               </div>
               <div className="summary-card">
@@ -3136,43 +3081,6 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   <div className="summary-value">{latestReportSummary.label}</div>
                   <div className="summary-meta">{latestReportSummary.meta}</div>
                 </div>
-              </div>
-            </div>
-            <div className="card analytics-card" style={{ marginTop: 16 }}>
-              <div className="analytics-header">
-                <div>
-                  <div className="analytics-title">Overall Analytics</div>
-                  <div className="section-subtitle">Based on your recorded form and test timelines.</div>
-                </div>
-                <div className="analytics-controls">
-                  <select
-                    className="analytics-filter"
-                    value={analyticsMetric}
-                    onChange={(e) => setAnalyticsMetric(e.target.value)}
-                  >
-                    <option value="form">Form Time</option>
-                    <option value="tests">Medical Tests</option>
-                    <option value="weight">Weight Trend</option>
-                  </select>
-                  <select
-                    className="analytics-filter"
-                    value={analyticsRange}
-                    onChange={(e) => setAnalyticsRange(e.target.value)}
-                  >
-                    <option value="7d">Last 7 days</option>
-                    <option value="30d">Last 30 days</option>
-                    <option value="90d">Last 90 days</option>
-                  </select>
-                </div>
-              </div>
-              <div className="analytics-panel">
-                <div className="analytics-panel-title">
-                  <span>{activeMetric.label}</span>
-                  <span className={`analytics-trend trend-${metricTrend.direction}`}>
-                    {metricTrend.direction === "up" ? "▲" : metricTrend.direction === "down" ? "▼" : "—"} {metricTrend.label}
-                  </span>
-                </div>
-                <LineChart data={activeMetric.series} color={activeMetric.color} />
               </div>
             </div>
             <HealthProgressDashboard vitals={vitals} />
