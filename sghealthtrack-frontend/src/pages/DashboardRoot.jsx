@@ -7,7 +7,6 @@ import CashierDashboard from "../dashboards/CashierDashboard";
 import DoctorDashboard from "../dashboards/DoctorDashboard";
 import XrayDashboard from "../dashboards/XrayDashboard";
 import AdminDashboard from "../dashboards/AdminDashboard";
-import AdminDashboard from "../dashboards/AdminDashboard";
 
 const STAFF_MAP = {
   admin: AdminDashboard,
