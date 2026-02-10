@@ -1018,6 +1018,7 @@ body {
   background: #ffffff;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  flex-wrap: nowrap;
 }
 
 .dashboard-utility-left {
@@ -1032,6 +1033,8 @@ body {
   align-items: center;
   gap: 12px;
   margin-left: 24px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
 .btn-hamburger {
@@ -3121,10 +3124,11 @@ body {
     align-items: center;
   }
 
-  #dashboard-utility-actions {
-    display: flex;
-    align-items: center;
-  }
+#dashboard-utility-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
   .btn-hamburger,
   .notif-button {
