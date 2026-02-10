@@ -304,7 +304,7 @@ function formatRoleLabel(role) {
   return s.replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
-export default function Sidebar({ navItems = ROUTES, userName, userEmail, role, onLogout, open, onClose }) {
+export default function Sidebar({ navItems = ROUTES, userName, userEmail, role, onLogout, open, onClose, collapsed }) {
   const roleLabel = useMemo(() => formatRoleLabel(role), [role]);
   const displayName = String(userName || userEmail || "").trim();
   const displayEmail = String(userEmail || "").trim();
@@ -330,6 +330,7 @@ export default function Sidebar({ navItems = ROUTES, userName, userEmail, role, 
       <aside
         className={`sidebar-drawer`}
         data-open={open || undefined}
+        data-collapsed={collapsed || undefined}
         aria-label="Main navigation"
       >
         <div className="sidebar-brand">

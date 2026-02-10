@@ -24,6 +24,7 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
   --sidebar-width: 250px;
+  --sidebar-collapsed-width: 84px;
   --topbar-height: 64px;
   --field-height: 42px;
   --field-padding: 10px 12px;
@@ -995,6 +996,10 @@ body {
   background: var(--bg-page);
 }
 
+.dashboard-layout[data-collapsed] {
+  --sidebar-width: var(--sidebar-collapsed-width);
+}
+
 .dashboard-main {
   flex: 1;
   min-width: 0;
@@ -1019,17 +1024,18 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
 }
 
 .dashboard-utility-right {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-left: auto;
+  gap: 12px;
+  margin-left: 24px;
 }
 
 .btn-hamburger {
-  display: none;
+  display: inline-flex;
   padding: 8px 12px;
   font-size: 18px;
   line-height: 1;
@@ -1046,8 +1052,8 @@ body {
 }
 
 .dashboard-search {
-  max-width: 280px;
-  width: 100%;
+  max-width: 420px;
+  width: min(420px, 100%);
   height: 40px;
   padding: 8px 12px;
   border-radius: 12px;
@@ -1481,8 +1487,70 @@ body {
   color: var(--primary);
 }
 
+.sidebar-drawer[data-collapsed] .sidebar-brand {
+  justify-content: center;
+  padding: 16px 10px 14px;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-brand::before {
+  display: none;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-brand-text,
+.sidebar-drawer[data-collapsed] .sidebar-role,
+.sidebar-drawer[data-collapsed] .sidebar-user-meta,
+.sidebar-drawer[data-collapsed] .sidebar-label {
+  display: none;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-nav {
+  padding: 12px 6px;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-link {
+  margin: 0 4px;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-user {
+  padding: 10px;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-user-row {
+  justify-content: center;
+}
+
+.sidebar-drawer[data-collapsed] .sidebar-footer {
+  padding: 10px;
+}
+
+.sidebar-drawer[data-collapsed] .btn-sidebar-logout {
+  padding: 10px;
+  font-size: 0;
+  line-height: 0;
+}
+
+.sidebar-drawer[data-collapsed] .btn-sidebar-logout::before {
+  content: "X";
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text);
+}
+
 /* Mobile: sidebar drawer + hamburger */
 @media (max-width: 900px) {
+  .dashboard-layout[data-collapsed] {
+    --sidebar-width: 250px;
+  }
+
   .dashboard-main {
     margin-left: 0;
   }

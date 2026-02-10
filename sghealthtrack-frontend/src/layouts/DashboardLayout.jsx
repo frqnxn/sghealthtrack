@@ -51,6 +51,7 @@ function formatRoleLabel(role) {
 
 export default function DashboardLayout({ session, role, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   const userEmail = session?.user?.email ?? "";
@@ -115,9 +116,21 @@ export default function DashboardLayout({ session, role, onLogout }) {
     }, 2500);
   };
 
+  const handleMenuToggle = () => {
+    if (window.innerWidth <= 900) {
+      setDrawerOpen(true);
+      return;
+    }
+    setSidebarCollapsed((prev) => !prev);
+  };
+
   return (
     <ToastContext.Provider value={{ showToast }}>
-      <div className="dashboard-layout" data-role={role || "unknown"}>
+      <div
+        className="dashboard-layout"
+        data-role={role || "unknown"}
+        data-collapsed={sidebarCollapsed ? "true" : undefined}
+      >
         <Sidebar
           navItems={navItems}
           userName={userName}
@@ -126,6 +139,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
           onLogout={onLogout}
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
+          collapsed={sidebarCollapsed}
         />
 
         <main className="dashboard-main">
@@ -134,19 +148,19 @@ export default function DashboardLayout({ session, role, onLogout }) {
               <button
                 type="button"
                 className="btn btn-hamburger"
-                aria-label="Open menu"
-                onClick={() => setDrawerOpen(true)}
+                aria-label="Toggle menu"
+                onClick={handleMenuToggle}
               >
                 ☰
               </button>
-            </div>
-            <div className="dashboard-utility-right">
               <input
                 type="search"
                 className="dashboard-search"
                 placeholder="Search…"
                 aria-label="Search"
               />
+            </div>
+            <div className="dashboard-utility-right">
               <div id="dashboard-utility-actions" />
               <div className="dashboard-user">
                 <div className="dashboard-user-info">
