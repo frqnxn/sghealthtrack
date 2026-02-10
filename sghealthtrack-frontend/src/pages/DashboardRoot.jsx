@@ -1,12 +1,13 @@
 // Renders /dashboard: patient overview or staff role-specific dashboard.
 import { useOutletContext } from "react-router-dom";
 import PatientDashboard from "../dashboards/PatientDashboard";
-import AdminDashboard from "../dashboards/AdminDashboard";
 import NurseDashboard from "../dashboards/NurseDashboard";
 import LabDashboard from "../dashboards/LabDashboard";
 import CashierDashboard from "../dashboards/CashierDashboard";
 import DoctorDashboard from "../dashboards/DoctorDashboard";
 import XrayDashboard from "../dashboards/XrayDashboard";
+import AdminDashboard from "../dashboards/AdminDashboard";
+import AdminDashboard from "../dashboards/AdminDashboard";
 
 const STAFF_MAP = {
   admin: AdminDashboard,
@@ -22,6 +23,10 @@ export default function DashboardRoot() {
 
   if (role === "patient") {
     return <PatientDashboard session={session} page="dashboard" />;
+  }
+
+  if (role === "receptionist") {
+    return <AdminDashboard session={session} page="appointments" />;
   }
 
   const Staff = STAFF_MAP[role];

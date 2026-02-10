@@ -8,6 +8,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardRoot from "./pages/DashboardRoot";
 import PatientPage from "./pages/PatientPage";
 import AdminPage from "./pages/AdminPage";
+import ReceptionistPage from "./pages/ReceptionistPage";
 import CashierPage from "./pages/CashierPage";
 import LabPage from "./pages/LabPage";
 import PatientSignupProfile from "./pages/PatientSignupProfile";
@@ -321,12 +322,12 @@ export default function App() {
         <Route path="payments" element={<PatientPage page="payments" />} />
         <Route path="medical-records" element={<PatientPage page="records" />} />
         <Route path="settings" element={<PatientPage page="settings" />} />
-        <Route path="admin/appointments" element={<AdminPage page="appointments" />} />
         <Route path="admin/patients" element={<AdminPage page="patients" />} />
         <Route path="admin/companies" element={<AdminPage page="companies" />} />
         <Route path="admin/users" element={<AdminPage page="users" />} />
         <Route path="admin/tools" element={<AdminPage page="tools" />} />
         <Route path="admin/settings" element={<AdminPage page="settings" />} />
+        <Route path="receptionist/appointments" element={<ReceptionistPage page="appointments" />} />
         <Route path="cashier/payments" element={<CashierPage page="payments" />} />
         <Route path="cashier/report" element={<CashierPage page="report" />} />
         <Route path="lab/history" element={<LabPage page="history" />} />

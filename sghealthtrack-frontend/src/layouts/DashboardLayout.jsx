@@ -18,12 +18,15 @@ const PATIENT_ROUTES = [
 ];
 
 const ADMIN_ROUTES = [
-  { path: "/admin/appointments", label: "Appointments" },
   { path: "/admin/patients", label: "Patients" },
   { path: "/admin/companies", label: "Partner Companies" },
   { path: "/admin/users", label: "Manage Users" },
   { path: "/admin/tools", label: "Admin Tools" },
   { path: "/admin/settings", label: "Settings" },
+];
+
+const RECEPTIONIST_ROUTES = [
+  { path: "/receptionist/appointments", label: "Appointments" },
 ];
 
 const CASHIER_ROUTES = [
@@ -46,6 +49,7 @@ function formatRoleLabel(role) {
   if (s === "patient") return "Patient";
   if (s === "lab") return "Lab";
   if (s === "nurse") return "Nurse";
+  if (s === "receptionist") return "Receptionist";
   return s.replace(/\b\w/g, (m) => m.toUpperCase());
 }
 
@@ -68,11 +72,13 @@ export default function DashboardLayout({ session, role, onLogout }) {
       ? PATIENT_ROUTES
       : isAdmin
         ? ADMIN_ROUTES
-      : role === "cashier"
-          ? CASHIER_ROUTES
-          : role === "lab"
-            ? LAB_ROUTES
-            : STAFF_ROUTES;
+      : role === "receptionist"
+          ? RECEPTIONIST_ROUTES
+          : role === "cashier"
+            ? CASHIER_ROUTES
+            : role === "lab"
+              ? LAB_ROUTES
+              : STAFF_ROUTES;
 
   useEffect(() => {
     const userId = session?.user?.id;

@@ -649,9 +649,9 @@ function AvailabilityCalendar({
 /* ---------------------------------------------------------
    Admin Dashboard
 --------------------------------------------------------- */
-export default function AdminDashboard({ session, page = "appointments" }) {
+export default function AdminDashboard({ session, page = "patients", appointmentsBasePath = "/admin/appointments" }) {
   const navigate = useNavigate();
-  const tab = page || "appointments";
+  const tab = page || "patients";
   const [topbarActionsEl, setTopbarActionsEl] = useState(null);
   const [staffList, setStaffList] = useState(() => {
     try {
@@ -1834,8 +1834,12 @@ export default function AdminDashboard({ session, page = "appointments" }) {
     <div className="patient-dashboard-content">
       <header className="page-header no-print">
         <div className="page-header-main">
-          <h1 className="page-title">Admin Dashboard</h1>
-          <p className="page-subtitle">Manage appointments, patients, partner companies, and tools.</p>
+          <h1 className="page-title">{tab === "appointments" ? "Receptionist Dashboard" : "Admin Dashboard"}</h1>
+          <p className="page-subtitle">
+            {tab === "appointments"
+              ? "Manage patient appointments and booking requests."
+              : "Manage appointments, patients, partner companies, and tools."}
+          </p>
         </div>
         <div className="page-actions" />
       </header>
@@ -2863,7 +2867,7 @@ export default function AdminDashboard({ session, page = "appointments" }) {
                 className="btn"
                 onClick={() => {
                   quickFillPatientId(selectedPatient.patient_id);
-                  navigate("/admin/appointments");
+                  navigate(appointmentsBasePath);
                   setMsg("Patient ID copied to notification form. You can send a clinic update.");
                 }}
               >
