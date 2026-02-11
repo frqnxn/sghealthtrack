@@ -374,31 +374,6 @@ function Select({ value, onChange, disabled, options = [] }) {
     </select>
   );
 }
-function Select({ value, onChange, disabled, options = [] }) {
-  return (
-    <select
-      value={value ?? ""}
-      onChange={onChange}
-      disabled={disabled}
-      className="input"
-      style={{
-        borderRadius: 10,
-        border: "1px solid rgba(15,23,42,0.12)",
-        background: disabled ? "rgba(148,163,184,0.12)" : "#ffffff",
-        padding: "10px 12px",
-        fontSize: 13,
-      }}
-    >
-      <option value="">Select</option>
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {opt}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function Textarea({ value, onChange, placeholder, rows = 5, disabled }) {
   return (
     <textarea
