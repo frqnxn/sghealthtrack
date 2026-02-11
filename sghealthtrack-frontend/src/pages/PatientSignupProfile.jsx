@@ -254,11 +254,14 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 className="auth-input"
                 placeholder="••••••••"
                 type="password"
-                minLength={8}
+                minLength={12}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
               />
+              <div className="auth-hint">
+                Use 12+ characters with uppercase, lowercase, number, symbol, and no spaces.
+              </div>
             </div>
           </div>
 
