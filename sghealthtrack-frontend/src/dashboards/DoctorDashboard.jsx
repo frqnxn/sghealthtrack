@@ -60,6 +60,23 @@ const LAB_DIAG_FIELDS = [
   ["lab_drug_test_result", "Drug Test", "lab_drug_test_findings"],
 ];
 
+const LAB_RESULT_OPTIONS = {
+  lab_pregnancy_test_result: ["Negative", "Positive", "Not done"],
+  lab_blood_type_result: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+  lab_drug_test_result: ["Negative", "Positive", "Not done"],
+  lab_hbsag_result: ["Non-reactive", "Reactive", "Not done"],
+};
+
+function sanitizeNumberInput(value, allowDecimal = true) {
+  const raw = String(value || "");
+  if (allowDecimal) {
+    const cleaned = raw.replace(/[^\d.]/g, "");
+    const parts = cleaned.split(".");
+    return parts.length > 1 ? `${parts[0]}.${parts.slice(1).join("")}` : cleaned;
+  }
+  return raw.replace(/\D/g, "");
+}
+
 // ---------- helpers ----------
 function calcAge(isoDate) {
   if (!isoDate) return "";
@@ -312,13 +329,32 @@ function Label({ children }) {
   return <label className="label">{children}</label>;
 }
 
-function Input({ value, onChange, placeholder, disabled, type = "text" }) {
+function Input({ value, onChange, placeholder, disabled, type = "text", ...rest }) {
   return (
     <input
       type={type}
       value={value ?? ""}
       onChange={onChange}
       placeholder={placeholder}
+      disabled={disabled}
+      className="input"
+      {...rest}
+      style={{
+        borderRadius: 10,
+        border: "1px solid rgba(15,23,42,0.12)",
+        background: disabled ? "rgba(148,163,184,0.12)" : "#ffffff",
+        padding: "10px 12px",
+        fontSize: 13,
+      }}
+    />
+  );
+}
+
+function Select({ value, onChange, disabled, options = [] }) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={onChange}
       disabled={disabled}
       className="input"
       style={{
@@ -328,7 +364,38 @@ function Input({ value, onChange, placeholder, disabled, type = "text" }) {
         padding: "10px 12px",
         fontSize: 13,
       }}
-    />
+    >
+      <option value="">Select</option>
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
+    </select>
+  );
+}
+function Select({ value, onChange, disabled, options = [] }) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={onChange}
+      disabled={disabled}
+      className="input"
+      style={{
+        borderRadius: 10,
+        border: "1px solid rgba(15,23,42,0.12)",
+        background: disabled ? "rgba(148,163,184,0.12)" : "#ffffff",
+        padding: "10px 12px",
+        fontSize: 13,
+      }}
+    >
+      <option value="">Select</option>
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -1301,9 +1368,10 @@ export default function DoctorDashboard({ session }) {
                             </label>
                             <Input
                               value={report.packs_per_day}
-                              onChange={(e) => setReportField("packs_per_day", e.target.value)}
+                              onChange={(e) => setReportField("packs_per_day", sanitizeNumberInput(e.target.value, false))}
                               placeholder="No. of packs/day"
                               disabled={formDisabled}
+                              inputMode="numeric"
                             />
                           </div>
                           <div>
@@ -1313,9 +1381,10 @@ export default function DoctorDashboard({ session }) {
                             </label>
                             <Input
                               value={report.alcohol_years}
-                              onChange={(e) => setReportField("alcohol_years", e.target.value)}
+                              onChange={(e) => setReportField("alcohol_years", sanitizeNumberInput(e.target.value, false))}
                               placeholder="No. of years"
                               disabled={formDisabled}
+                              inputMode="numeric"
                             />
                           </div>
                         </div>
@@ -1356,33 +1425,75 @@ export default function DoctorDashboard({ session }) {
                           <div>
                             <Label>BP (mmHg)</Label>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                              <Input value={report.bp_systolic} onChange={(e) => setReportField("bp_systolic", e.target.value)} placeholder="Systolic" disabled={formDisabled} />
-                              <Input value={report.bp_diastolic} onChange={(e) => setReportField("bp_diastolic", e.target.value)} placeholder="Diastolic" disabled={formDisabled} />
+                              <Input
+                                value={report.bp_systolic}
+                                onChange={(e) => setReportField("bp_systolic", sanitizeNumberInput(e.target.value, false))}
+                                placeholder="Systolic"
+                                disabled={formDisabled}
+                                inputMode="numeric"
+                              />
+                              <Input
+                                value={report.bp_diastolic}
+                                onChange={(e) => setReportField("bp_diastolic", sanitizeNumberInput(e.target.value, false))}
+                                placeholder="Diastolic"
+                                disabled={formDisabled}
+                                inputMode="numeric"
+                              />
                             </div>
                           </div>
                           <div>
                             <Label>PR (bpm)</Label>
-                            <Input value={report.pr} onChange={(e) => setReportField("pr", e.target.value)} disabled={formDisabled} />
+                            <Input
+                              value={report.pr}
+                              onChange={(e) => setReportField("pr", sanitizeNumberInput(e.target.value, false))}
+                              disabled={formDisabled}
+                              inputMode="numeric"
+                            />
                           </div>
                           <div>
                             <Label>RR (/min)</Label>
-                            <Input value={report.rr} onChange={(e) => setReportField("rr", e.target.value)} disabled={formDisabled} />
+                            <Input
+                              value={report.rr}
+                              onChange={(e) => setReportField("rr", sanitizeNumberInput(e.target.value, false))}
+                              disabled={formDisabled}
+                              inputMode="numeric"
+                            />
                           </div>
                           <div>
                             <Label>Temp (°C)</Label>
-                            <Input value={report.temp_c} onChange={(e) => setReportField("temp_c", e.target.value)} disabled={formDisabled} />
+                            <Input
+                              value={report.temp_c}
+                              onChange={(e) => setReportField("temp_c", sanitizeNumberInput(e.target.value, true))}
+                              disabled={formDisabled}
+                              inputMode="decimal"
+                            />
                           </div>
                           <div>
                             <Label>Height (ft)</Label>
-                            <Input value={report.height_ft} onChange={(e) => setReportField("height_ft", e.target.value)} disabled={formDisabled} />
+                            <Input
+                              value={report.height_ft}
+                              onChange={(e) => setReportField("height_ft", sanitizeNumberInput(e.target.value, false))}
+                              disabled={formDisabled}
+                              inputMode="numeric"
+                            />
                           </div>
                           <div>
                             <Label>Height (inch)</Label>
-                            <Input value={report.height_in} onChange={(e) => setReportField("height_in", e.target.value)} disabled={formDisabled} />
+                            <Input
+                              value={report.height_in}
+                              onChange={(e) => setReportField("height_in", sanitizeNumberInput(e.target.value, false))}
+                              disabled={formDisabled}
+                              inputMode="numeric"
+                            />
                           </div>
                           <div>
                             <Label>Weight (lbs.)</Label>
-                            <Input value={report.weight_lbs} onChange={(e) => setReportField("weight_lbs", e.target.value)} disabled={formDisabled} />
+                            <Input
+                              value={report.weight_lbs}
+                              onChange={(e) => setReportField("weight_lbs", sanitizeNumberInput(e.target.value, true))}
+                              disabled={formDisabled}
+                              inputMode="decimal"
+                            />
                           </div>
                         </div>
                       </div>
@@ -1521,7 +1632,16 @@ export default function DoctorDashboard({ session }) {
                                 <tr key={resKey}>
                                   <td>{label}</td>
                                   <td>
-                                    <Input value={report[resKey]} onChange={(e) => setReportField(resKey, e.target.value)} disabled={formDisabled} />
+                                    {LAB_RESULT_OPTIONS[resKey] ? (
+                                      <Select
+                                        value={report[resKey]}
+                                        onChange={(e) => setReportField(resKey, e.target.value)}
+                                        disabled={formDisabled}
+                                        options={LAB_RESULT_OPTIONS[resKey]}
+                                      />
+                                    ) : (
+                                      <Input value={report[resKey]} onChange={(e) => setReportField(resKey, e.target.value)} disabled={formDisabled} />
+                                    )}
                                   </td>
                                   <td>
                                     <Input value={report[findKey]} onChange={(e) => setReportField(findKey, e.target.value)} disabled={formDisabled} />
