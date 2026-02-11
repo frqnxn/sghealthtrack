@@ -265,10 +265,6 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
             </div>
           </div>
 
-          <div className="auth-footnote">
-            Staff accounts ({STAFF_DOMAIN}) are created by the clinic admin only.
-          </div>
-
           <div className="auth-grid-3">
             <div>
               <label className="auth-label">First name</label>
