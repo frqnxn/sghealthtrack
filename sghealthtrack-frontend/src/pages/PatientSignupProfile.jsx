@@ -69,6 +69,10 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [showResend, setShowResend] = useState(false);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [pendingProfile, setPendingProfile] = useState(null);
+  const [pendingEmail, setPendingEmail] = useState("");
   const isSuccessMsg = msg && /successful|resent|account created|redirecting/i.test(msg);
 
   const age = useMemo(() => calcAge(birthDate), [birthDate]);
@@ -99,6 +103,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
     e.preventDefault();
     setMsg("");
     setShowResend(false);
+    setOtpStep(false);
 
     const v = validate();
     if (v) return setMsg(v);
@@ -122,13 +127,10 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
       contact_no: cleanContact(contactNo),
     };
 
-    const redirectTo = `${window.location.origin}/auth/callback`;
-
     const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
       email: emailLower,
       password,
       options: {
-        emailRedirectTo: redirectTo,
         data: meta,
       },
     });
@@ -153,43 +155,40 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
       return setMsg("Email already exists. Please log in or use a different email.");
     }
 
-    const hasSessionNow = !!signUpData?.session;
     setLoading(false);
 
-    if (hasSessionNow) {
-      // If email confirmation is OFF, create profile immediately.
-      const userId = signUpData?.user?.id;
-      const profilePayload = {
-        id: userId,
-        role: "patient",
-        email: emailLower,
-        full_name: meta.full_name,
-        company: meta.company,
-        gender: meta.gender,
-        birth_date: meta.birth_date,
-        age: meta.age,
-        civil_status: meta.civil_status,
-        address: meta.address,
-        contact_no: meta.contact_no,
-        updated_at: new Date().toISOString(),
-      };
-      // Ignore failure here; the callback page will retry after confirmation.
-      await supabase.from("profiles").upsert(profilePayload, { onConflict: "id" });
-
-      setMsg("Signup successful! Redirecting…");
-      onDone?.();
-      return;
+    if (signUpData?.session) {
+      await supabase.auth.signOut();
     }
 
+    const profilePayload = {
+      role: "patient",
+      email: emailLower,
+      full_name: meta.full_name,
+      company: meta.company,
+      gender: meta.gender,
+      birth_date: meta.birth_date,
+      age: meta.age,
+      civil_status: meta.civil_status,
+      address: meta.address,
+      contact_no: meta.contact_no,
+      updated_at: new Date().toISOString(),
+    };
+    setPendingProfile(profilePayload);
+    setPendingEmail(emailLower);
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: emailLower,
+      options: { shouldCreateUser: false },
+    });
+
+    if (otpError) {
+      return setMsg(`Failed to send verification code: ${otpError.message}`);
+    }
+
+    setOtpStep(true);
     setShowResend(true);
-    setMsg(
-      "Account created!\n\n" +
-        "Please confirm your email to activate your account.\n\n" +
-        "1) Check Inbox / Spam / Promotions\n" +
-        "2) Click the confirmation link\n" +
-        "3) Then login\n\n" +
-        "If you didn’t receive the email, click “Resend Confirmation Email”."
-    );
+    setMsg("Verification code sent to your email. Enter the 6-digit code to finish signup.");
   }
 
   async function resendConfirmation() {
@@ -198,19 +197,44 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
     if (!emailLower) return setMsg("Please enter your email first.");
 
     setLoading(true);
-    const { error } = await supabase.auth.resend({
-      type: "signup",
+    const { error } = await supabase.auth.signInWithOtp({
       email: emailLower,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { shouldCreateUser: false },
     });
     setLoading(false);
 
-    if (error) return setMsg("Failed to resend confirmation email: " + error.message);
+    if (error) return setMsg("Failed to resend verification code: " + error.message);
 
-    setMsg(
-      "Confirmation email resent!\n\n" +
-        "Please check Inbox / Spam / Promotions. After confirming, return to login."
-    );
+    setMsg("Verification code resent. Please check your inbox/spam.");
+  }
+
+  async function verifyOtp(e) {
+    e.preventDefault();
+    setMsg("");
+    const code = String(otpCode || "").trim();
+    if (!pendingEmail) return setMsg("Email is required.");
+    if (code.length < 6) return setMsg("Enter the 6-digit verification code.");
+
+    setLoading(true);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: pendingEmail,
+      token: code,
+      type: "email",
+    });
+    if (error) {
+      setLoading(false);
+      return setMsg(error.message);
+    }
+
+    const userId = data?.user?.id;
+    if (userId && pendingProfile) {
+      const payload = { ...pendingProfile, id: userId };
+      await supabase.from("profiles").upsert(payload, { onConflict: "id" });
+    }
+
+    setLoading(false);
+    setMsg("Signup successful! Redirecting…");
+    onDone?.();
   }
 
   return (
@@ -235,7 +259,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
           </button>
         </div>
 
-        <form onSubmit={handleSignup} className="auth-form-block auth-form-stack">
+        <form onSubmit={otpStep ? verifyOtp : handleSignup} className="auth-form-block auth-form-stack">
           <div className="auth-grid-2">
             <div>
               <label className="auth-label">Email</label>
@@ -246,6 +270,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                disabled={otpStep}
               />
             </div>
             <div>
@@ -258,6 +283,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
+                disabled={otpStep}
               />
               <div className="auth-hint">
                 Use 12+ characters with uppercase, lowercase, number, symbol, and no spaces.
@@ -273,6 +299,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 placeholder="Juan"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                disabled={otpStep}
               />
             </div>
             <div>
@@ -282,6 +309,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 placeholder="Santos"
                 value={middleName}
                 onChange={(e) => setMiddleName(e.target.value)}
+                disabled={otpStep}
               />
             </div>
             <div>
@@ -291,6 +319,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 placeholder="Dela Cruz"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                disabled={otpStep}
               />
             </div>
           </div>
@@ -303,6 +332,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 placeholder="Company name"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
+                disabled={otpStep}
               />
             </div>
             <div>
@@ -315,11 +345,12 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 inputMode="numeric"
                 maxLength={13}
                 type="tel"
+                disabled={otpStep}
               />
             </div>
             <div>
               <label className="auth-label">Gender</label>
-              <select className="auth-input" value={gender} onChange={(e) => setGender(e.target.value)}>
+              <select className="auth-input" value={gender} onChange={(e) => setGender(e.target.value)} disabled={otpStep}>
                 <option value="">Select…</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -333,6 +364,7 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
+                disabled={otpStep}
               />
             </div>
             <div>
@@ -342,7 +374,12 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
             </div>
             <div>
               <label className="auth-label">Civil status</label>
-              <select className="auth-input" value={civilStatus} onChange={(e) => setCivilStatus(e.target.value)}>
+              <select
+                className="auth-input"
+                value={civilStatus}
+                onChange={(e) => setCivilStatus(e.target.value)}
+                disabled={otpStep}
+              >
                 <option value="">Select</option>
                 <option value="single">Single</option>
                 <option value="married">Married</option>
@@ -359,12 +396,27 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
               placeholder="Complete address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              disabled={otpStep}
             />
           </div>
 
+          {otpStep && (
+            <div>
+              <label className="auth-label">Email verification code</label>
+              <input
+                className="auth-input"
+                placeholder="Enter 6-digit code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              />
+            </div>
+          )}
+
           <div className="auth-form-actions">
             <button className="auth-primary-btn" type="submit" disabled={loading}>
-              {loading ? "Creating account..." : "Create Account"}
+              {loading ? "Sending..." : otpStep ? "Verify Code →" : "Create Account"}
             </button>
             <button className="auth-outline-btn" type="button" onClick={() => (onGoLogin ?? onDone)?.()}>
               Back to Login
@@ -377,9 +429,9 @@ export default function PatientSignupProfile({ onDone, onGoLogin }) {
             </div>
           )}
 
-          {showResend && (
+          {(showResend || otpStep) && (
             <button className="auth-link" type="button" onClick={resendConfirmation}>
-              Resend Confirmation Email
+              Resend Verification Code
             </button>
           )}
         </form>

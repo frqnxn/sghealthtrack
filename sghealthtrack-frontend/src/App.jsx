@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import sgHealthtrackLogo from "./image/sghealthtrack-logo.png";
@@ -19,13 +19,28 @@ import "./styles/clinic.css";
 
 const STAFF_DOMAIN = "@smartguys.com";
 
-function LoginPage({ staffDomain = STAFF_DOMAIN, onLogin, onGoSignup, onForgotPassword, msg }) {
+function LoginPage({
+  staffDomain = STAFF_DOMAIN,
+  onLogin,
+  onVerifyOtp,
+  onResendOtp,
+  onGoSignup,
+  onForgotPassword,
+  msg,
+  otpActive,
+  otpEmail,
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const isSuccessMsg = msg && /successful|sent|redirecting|logged in/i.test(msg);
 
   function handleSubmit(e) {
     e.preventDefault();
+    if (otpActive) {
+      onVerifyOtp?.({ email: otpEmail || email, code: otpCode });
+      return;
+    }
     onLogin?.({ email, password });
   }
 
@@ -55,6 +70,7 @@ function LoginPage({ staffDomain = STAFF_DOMAIN, onLogin, onGoSignup, onForgotPa
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            disabled={otpActive}
           />
 
           <label className="auth-label">Password</label>
@@ -65,13 +81,38 @@ function LoginPage({ staffDomain = STAFF_DOMAIN, onLogin, onGoSignup, onForgotPa
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
+            disabled={otpActive}
           />
 
+          {otpActive && (
+            <>
+              <label className="auth-label">Email verification code</label>
+              <input
+                className="auth-input"
+                placeholder="Enter 6-digit code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              />
+            </>
+          )}
+
           <button className="auth-primary-btn" type="submit">
-            Sign In →
+            {otpActive ? "Verify Code →" : "Sign In →"}
           </button>
 
           {msg && <div className={`auth-msg ${isSuccessMsg ? "auth-msg-success" : "auth-msg-error"}`}>{msg}</div>}
+
+          {otpActive && (
+            <button
+              className="auth-link"
+              type="button"
+              onClick={() => onResendOtp?.(otpEmail || email)}
+            >
+              Resend verification code
+            </button>
+          )}
 
           <button className="auth-link" type="button" onClick={() => onForgotPassword?.(email)}>
             Forgot password?
@@ -106,11 +147,14 @@ export default function App() {
   const [role, setRole] = useState(null);
   const [loadingRole, setLoadingRole] = useState(false);
   const [msg, setMsg] = useState("");
+  const [otpState, setOtpState] = useState({ active: false, email: "" });
+  const authHoldRef = useRef(false);
   const API_BASE = import.meta.env.VITE_API_URL || "";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (authHoldRef.current && (event === "SIGNED_IN" || event === "SIGNED_OUT")) return;
       setSession(sess);
       setRole(null);
       setMsg("");
@@ -238,16 +282,65 @@ export default function App() {
 
   async function signIn({ email, password }) {
     setMsg("");
+    setOtpState({ active: false, email: "" });
     const emailLower = String(email || "").trim().toLowerCase();
     if (!emailLower) return setMsg("Email is required.");
     if (!password) return setMsg("Password is required.");
+    authHoldRef.current = true;
     const { error } = await supabase.auth.signInWithPassword({
       email: emailLower,
       password,
     });
+    if (error) {
+      authHoldRef.current = false;
+      return setMsg(error.message);
+    }
+
+    await supabase.auth.signOut();
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: emailLower,
+      options: { shouldCreateUser: false },
+    });
+    if (otpError) {
+      authHoldRef.current = false;
+      return setMsg(`Failed to send verification code: ${otpError.message}`);
+    }
+
+    setOtpState({ active: true, email: emailLower });
+    setMsg("Verification code sent to your email. Enter the 6-digit code to continue.");
+  }
+
+  async function verifyLoginOtp({ email, code }) {
+    setMsg("");
+    const emailLower = String(email || "").trim().toLowerCase();
+    if (!emailLower) return setMsg("Email is required.");
+    if (!code || String(code).trim().length < 6) return setMsg("Enter the 6-digit verification code.");
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: emailLower,
+      token: String(code).trim(),
+      type: "email",
+    });
     if (error) return setMsg(error.message);
+
+    authHoldRef.current = false;
+    setOtpState({ active: false, email: "" });
+    if (data?.session) setSession(data.session);
     setMsg("Logged in!");
     navigate("/dashboard");
+  }
+
+  async function resendLoginOtp(email) {
+    setMsg("");
+    const emailLower = String(email || "").trim().toLowerCase();
+    if (!emailLower) return setMsg("Email is required.");
+    const { error } = await supabase.auth.signInWithOtp({
+      email: emailLower,
+      options: { shouldCreateUser: false },
+    });
+    if (error) return setMsg(`Failed to resend code: ${error.message}`);
+    setMsg("Verification code resent. Check your inbox/spam.");
   }
 
   async function requestPasswordReset(email) {
@@ -281,8 +374,12 @@ export default function App() {
             staffDomain={STAFF_DOMAIN}
             msg={msg}
             onLogin={signIn}
+            onVerifyOtp={verifyLoginOtp}
+            onResendOtp={resendLoginOtp}
             onForgotPassword={requestPasswordReset}
             onGoSignup={() => { setMsg(""); navigate("/signup"); }}
+            otpActive={otpState.active}
+            otpEmail={otpState.email}
           />
         )
       } />
