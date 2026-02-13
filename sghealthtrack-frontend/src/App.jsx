@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import sgHealthtrackLogo from "./image/sghealthtrack-logo.png";
 import clinicHero from "./image/clinic.jpg";
@@ -30,10 +30,18 @@ function LoginPage({
   otpActive,
   otpEmail,
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otpCode, setOtpCode] = useState("");
+  const [showConfirmed, setShowConfirmed] = useState(false);
   const isSuccessMsg = msg && /successful|sent|redirecting|logged in/i.test(msg);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setShowConfirmed(params.get("confirmed") === "1");
+  }, [location.search]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -44,8 +52,35 @@ function LoginPage({
     onLogin?.({ email, password });
   }
 
+  function dismissConfirmed() {
+    setShowConfirmed(false);
+    navigate("/login", { replace: true });
+  }
+
   return (
     <div className="auth-split">
+      {showConfirmed && (
+        <div className="modal-overlay">
+          <div className="modal-card" style={{ maxWidth: 420, textAlign: "center" }}>
+            <div className="auth-brand" style={{ justifyContent: "center" }}>
+              <img className="auth-logo" src={sgHealthtrackLogo} alt="SG HealthTrack" />
+              <div>
+                <div className="auth-title">SG HealthTrack</div>
+                <div className="auth-subtitle">Medical Screening</div>
+              </div>
+            </div>
+            <h2 className="auth-heading" style={{ marginTop: 8 }}>
+              Email confirmed!
+            </h2>
+            <p className="auth-help" style={{ marginBottom: 16 }}>
+              You can now log in using your new account.
+            </p>
+            <button className="btn btn-primary" onClick={dismissConfirmed}>
+              Continue to login
+            </button>
+          </div>
+        </div>
+      )}
       <div className="auth-panel auth-panel-left">
         <div className="auth-logo-row">
           <div className="auth-logo-badge">

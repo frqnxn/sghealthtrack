@@ -21,6 +21,7 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let timer;
 
     async function handleCallback() {
       const { data } = await supabase.auth.getSession();
@@ -46,13 +47,19 @@ export default function AuthCallbackPage() {
         await supabase.from("profiles").upsert(payload, { onConflict: "id" });
         await supabase.auth.signOut();
         setStatus("confirmed");
+        timer = setTimeout(() => {
+          navigate("/login?confirmed=1", { replace: true });
+        }, 1200);
       } else {
         setStatus("error");
       }
     }
 
     handleCallback();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [navigate]);
 
   return (
@@ -86,12 +93,14 @@ export default function AuthCallbackPage() {
             </h2>
             <p className="auth-help" style={{ marginBottom: 16 }}>
               {status === "confirmed"
-                ? "You can now log in using your new account."
+                ? "Redirecting you to login…"
                 : "Please try again or contact the clinic if the issue persists."}
             </p>
-            <button className="btn btn-primary" onClick={() => navigate("/login", { replace: true })}>
-              Go to login
-            </button>
+            {status !== "confirmed" && (
+              <button className="btn btn-primary" onClick={() => navigate("/login", { replace: true })}>
+                Go to login
+              </button>
+            )}
           </div>
         </div>
       )}
