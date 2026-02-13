@@ -57,6 +57,8 @@ export default function DashboardLayout({ session, role, onLogout }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState(null);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
   const toastTimerRef = useRef(null);
   const userEmail = session?.user?.email ?? "";
   const [profileName, setProfileName] = useState("");
@@ -82,6 +84,15 @@ export default function DashboardLayout({ session, role, onLogout }) {
 
   useEffect(() => {
     const userId = session?.user?.id;
+    if (userId) {
+      const key = `sghealthtrack_privacy_ack_${userId}`;
+      const acknowledged = localStorage.getItem(key) === "true";
+      setPrivacyOpen(!acknowledged);
+      setPrivacyChecked(false);
+    } else {
+      setPrivacyOpen(false);
+      setPrivacyChecked(false);
+    }
     if (!userId || metaName) return;
     let cancelled = false;
 
@@ -130,6 +141,15 @@ export default function DashboardLayout({ session, role, onLogout }) {
     setSidebarCollapsed((prev) => !prev);
   };
 
+  const handlePrivacyAccept = () => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    const key = `sghealthtrack_privacy_ack_${userId}`;
+    localStorage.setItem(key, "true");
+    setPrivacyOpen(false);
+    setPrivacyChecked(false);
+  };
+
   return (
     <ToastContext.Provider value={{ showToast }}>
       <div
@@ -137,6 +157,38 @@ export default function DashboardLayout({ session, role, onLogout }) {
         data-role={role || "unknown"}
         data-collapsed={sidebarCollapsed ? "true" : undefined}
       >
+        {privacyOpen && (
+          <div className="privacy-overlay">
+            <div className="privacy-modal">
+              <div className="privacy-header">
+                <h3>Data Privacy Statement</h3>
+                <p>Please review and accept our data privacy statement before continuing.</p>
+              </div>
+              <div className="privacy-body">
+                SG HealthTrack collects personal and medical information to provide diagnostic services, manage appointments,
+                and deliver reports securely. We process data only for legitimate clinical purposes, follow applicable privacy laws,
+                and use reasonable safeguards to protect your information.
+              </div>
+              <div className="privacy-body">
+                By accepting, you consent to the collection, use, and storage of your data for these purposes. You may request access,
+                correction, or deletion of your data by contacting the clinic.
+              </div>
+              <label className="privacy-check">
+                <input
+                  type="checkbox"
+                  checked={privacyChecked}
+                  onChange={(e) => setPrivacyChecked(e.target.checked)}
+                />
+                <span>I agree to the data privacy statement.</span>
+              </label>
+              <div className="privacy-actions">
+                <button className="btn btn-primary" disabled={!privacyChecked} onClick={handlePrivacyAccept}>
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <Sidebar
           navItems={navItems}
           userName={userName}

@@ -11,8 +11,11 @@ function pickBool(v) {
 }
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+const RH_OPTIONS = ["Positive", "Negative", "Pos", "Neg"];
 const HBSAG_OPTIONS = ["Non-reactive", "Reactive"];
+const HEPA_A_OPTIONS = ["Non-reactive", "Reactive"];
 const PREG_OPTIONS = ["Negative", "Positive"];
+const DRUG_TEST_OPTIONS = ["Negative", "Positive"];
 const EMPTY_RESULTS = {
   cbc_platelet: "",
   cbc_hemoglobin: "",
@@ -645,6 +648,8 @@ export default function LabDashboard({ session, page = "queue" }) {
       "cbc_basophils",
       "ua_ph",
       "ua_specific_gravity",
+      "fbs",
+      "rbs",
     ];
 
     for (const key of numericKeys) {
@@ -657,10 +662,16 @@ export default function LabDashboard({ session, page = "queue" }) {
       return "CBC & Platelet must be a number.";
     if (requested.blood_typing && values.blood_typing && !BLOOD_TYPES.includes(values.blood_typing))
       return "Blood Typing must be selected from the dropdown.";
+    if (requested.blood_typing && values.rh_factor && !RH_OPTIONS.includes(values.rh_factor))
+      return "RH factor must be selected from the dropdown.";
     if (requested.pregnancy_test && values.pregnancy_test && !PREG_OPTIONS.includes(values.pregnancy_test))
       return "Pregnancy Test must be selected from the dropdown.";
+    if (requested.hepatitis_a && values.hepa_a_test && !HEPA_A_OPTIONS.includes(values.hepa_a_test))
+      return "Hepatitis A test must be selected from the dropdown.";
     if (requested.hepatitis_b && values.hbsag && !HBSAG_OPTIONS.includes(values.hbsag))
       return "Hepatitis B Screening must be selected from the dropdown.";
+    if (requested.drug_test && values.drug_test && !DRUG_TEST_OPTIONS.includes(values.drug_test))
+      return "Drug Test must be selected from the dropdown.";
 
     return "";
   }
@@ -1137,17 +1148,27 @@ export default function LabDashboard({ session, page = "queue" }) {
                                   options={BLOOD_TYPES}
                                   placeholder="Select blood type"
                                 />
-                                <TextField label="RH" keyName="rh_factor" placeholder="e.g. Positive" />
+                                <SelectField
+                                  label="RH Factor"
+                                  keyName="rh_factor"
+                                  options={RH_OPTIONS}
+                                  placeholder="Select RH"
+                                />
                               </>
                             )}
                             {hasCustomLabel("fbs") && (
-                              <TextField label="FBS" keyName="fbs" placeholder="e.g. 90 mg/dL" />
+                              <NumberField label="FBS (mg/dL)" keyName="fbs" placeholder="e.g. 90" />
                             )}
                             {hasCustomLabel("rbs") && (
-                              <TextField label="RBS" keyName="rbs" placeholder="e.g. 110 mg/dL" />
+                              <NumberField label="RBS (mg/dL)" keyName="rbs" placeholder="e.g. 110" />
                             )}
                             {requested.hepatitis_a && (
-                              <TextField label="Hepa A Test" keyName="hepa_a_test" placeholder="e.g. Negative" />
+                              <SelectField
+                                label="Hepa A Test"
+                                keyName="hepa_a_test"
+                                options={HEPA_A_OPTIONS}
+                                placeholder="Select result"
+                              />
                             )}
                             {requested.hepatitis_b && (
                               <SelectField
@@ -1158,10 +1179,11 @@ export default function LabDashboard({ session, page = "queue" }) {
                               />
                             )}
                             {requested.drug_test && (
-                              <TextField
+                              <SelectField
                                 label="Drug Test"
                                 keyName="drug_test"
-                                placeholder="e.g. Negative / Positive"
+                                options={DRUG_TEST_OPTIONS}
+                                placeholder="Select result"
                               />
                             )}
                           </SectionCard>

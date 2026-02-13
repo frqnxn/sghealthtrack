@@ -558,6 +558,17 @@ export default function NurseDashboard({ session }) {
     </label>
   );
 
+  const BooleanSelect = ({ label, value, onChange }) => (
+    <label style={{ display: "grid", gap: 6 }}>
+      <span style={{ opacity: 0.75 }}>{label}</span>
+      <select className="input" value={value ? "yes" : value === false ? "no" : ""} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Select…</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </label>
+  );
+
   function requirementsSummary(r) {
     if (!r) return "No form slip / requirements found yet.";
     const items = [];
@@ -755,33 +766,22 @@ export default function NurseDashboard({ session }) {
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 14, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                    <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={!!triageDraft.pregnancy_possible}
-                        onChange={(e) => setTriageDraft((d) => ({ ...d, pregnancy_possible: e.target.checked }))}
-                      />
-                      <span style={{ opacity: 0.9 }}>Pregnancy possible</span>
-                    </label>
-
-                    <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={!!triageDraft.needs_repeat_bp}
-                        onChange={(e) => setTriageDraft((d) => ({ ...d, needs_repeat_bp: e.target.checked }))}
-                      />
-                      <span style={{ opacity: 0.9 }}>Needs repeat BP</span>
-                    </label>
-
-                    <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={!!triageDraft.fit_for_exam}
-                        onChange={(e) => setTriageDraft((d) => ({ ...d, fit_for_exam: e.target.checked }))}
-                      />
-                      <span style={{ opacity: 0.9 }}>Fit for exam</span>
-                    </label>
+                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 10 }}>
+                    <BooleanSelect
+                      label="Pregnancy possible"
+                      value={triageDraft.pregnancy_possible}
+                      onChange={(val) => setTriageDraft((d) => ({ ...d, pregnancy_possible: val === "yes" }))}
+                    />
+                    <BooleanSelect
+                      label="Needs repeat BP"
+                      value={triageDraft.needs_repeat_bp}
+                      onChange={(val) => setTriageDraft((d) => ({ ...d, needs_repeat_bp: val === "yes" }))}
+                    />
+                    <BooleanSelect
+                      label="Fit for exam"
+                      value={triageDraft.fit_for_exam}
+                      onChange={(val) => setTriageDraft((d) => ({ ...d, fit_for_exam: val === "yes" }))}
+                    />
                   </div>
 
                   <div style={{ marginTop: 14 }}>
