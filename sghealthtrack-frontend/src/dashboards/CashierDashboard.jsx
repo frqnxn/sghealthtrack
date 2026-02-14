@@ -498,11 +498,29 @@ export default function CashierDashboard({ session, page = "payments" }) {
 
     const amt = toNumOrNull(amount);
 
+    const normalizedOr = orNumber.trim().replace(/\s+/g, "");
+    const orLength = normalizedOr.length;
+
     if (status === "completed") {
-      if (!orNumber.trim()) return setMsg("OR Number is required when marking COMPLETED.");
-      if (orNumber.trim().length < 3) return setMsg("OR Number must be at least 3 characters.");
+      if (!normalizedOr) return setMsg("OR Number is required when marking COMPLETED.");
+      if (orLength < 4 || orLength > 15) {
+        return setMsg("OR Number must be between 4 and 15 characters.");
+      }
+      if (!/^[a-zA-Z0-9-]+$/.test(normalizedOr)) {
+        return setMsg("OR Number can only contain letters, numbers, and dashes.");
+      }
       if (amt === null || amt <= 0) return setMsg("Amount must be a positive number.");
       if (amt > 1000000) return setMsg("Amount is too large. Please verify.");
+
+      const { data: existingOr, error: orErr } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("or_number", normalizedOr)
+        .limit(1);
+      if (orErr) return setMsg(`Failed to validate OR Number: ${orErr.message}`);
+      if (existingOr && existingOr.length > 0) {
+        return setMsg("OR Number already exists. Please use a unique OR.");
+      }
     }
 
     const baseNotes = notes.trim();
@@ -519,7 +537,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
       recorded_by: cashierId,
 
       payment_status: status,
-      or_number: status === "completed" ? orNumber.trim() : null,
+      or_number: status === "completed" ? normalizedOr : null,
       amount: status === "completed" ? amt : null,
       notes: combinedNotes || null,
       recorded_at: new Date().toISOString(),
