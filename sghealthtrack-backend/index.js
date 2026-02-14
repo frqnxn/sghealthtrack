@@ -3,11 +3,13 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import reportRoutes from "./routes/report.js";
+import archiveRoutes from "./routes/archive.js";
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.use("/api/report", reportRoutes);
+app.use("/api/admin/archive", archiveRoutes);
 
 app.use(
   cors({
