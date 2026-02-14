@@ -84,7 +84,10 @@ export default function DashboardLayout({ session, role, onLogout }) {
 
   useEffect(() => {
     const userId = session?.user?.id;
-    if (userId) {
+    if (!isPatient) {
+      setPrivacyOpen(false);
+      setPrivacyChecked(false);
+    } else if (userId) {
       const key = `sghealthtrack_privacy_ack_${userId}`;
       const acknowledged = localStorage.getItem(key) === "true";
       setPrivacyOpen(!acknowledged);
@@ -112,7 +115,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
     return () => {
       cancelled = true;
     };
-  }, [session?.user?.id, metaName]);
+  }, [session?.user?.id, metaName, isPatient]);
 
   useEffect(() => {
     return () => {
@@ -157,7 +160,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
         data-role={role || "unknown"}
         data-collapsed={sidebarCollapsed ? "true" : undefined}
       >
-        {privacyOpen && (
+        {isPatient && privacyOpen && (
           <div className="privacy-overlay">
             <div className="privacy-modal">
               <div className="privacy-header">
