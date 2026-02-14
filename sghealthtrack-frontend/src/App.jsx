@@ -321,14 +321,23 @@ export default function App() {
     const emailLower = String(email || "").trim().toLowerCase();
     if (!emailLower) return setMsg("Email is required.");
     if (!password) return setMsg("Password is required.");
+    const isStaffEmail = emailLower.endsWith(STAFF_DOMAIN);
     authHoldRef.current = true;
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: emailLower,
       password,
     });
     if (error) {
       authHoldRef.current = false;
       return setMsg(error.message);
+    }
+
+    if (isStaffEmail) {
+      authHoldRef.current = false;
+      if (data?.session) setSession(data.session);
+      setMsg("Logged in!");
+      navigate("/dashboard");
+      return;
     }
 
     await supabase.auth.signOut();
