@@ -1009,15 +1009,19 @@ body {
 }
 
 .dashboard-utility {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
   align-items: center;
-  gap: 14px;
-  height: var(--topbar-height);
-  padding: 0 24px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--border);
+  min-height: var(--topbar-height);
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(10px);
 }
 
 .dashboard-utility-left {
@@ -1025,6 +1029,7 @@ body {
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1;
 }
 
 .dashboard-utility-right {
@@ -3116,10 +3121,6 @@ body {
 
   .dashboard-utility {
     gap: 10px;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    grid-template-columns: 1fr auto;
     align-items: center;
   }
 
@@ -3136,12 +3137,12 @@ body {
     align-items: center;
   }
 
-#dashboard-utility-actions {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  height: 32px;
-}
+  #dashboard-utility-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 40px;
+  }
 
   .btn-hamburger,
   .notif-button {

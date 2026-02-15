@@ -221,7 +221,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
                 aria-label="Search"
               />
             </div>
-            <div className="dashboard-utility-right" style={{ paddingTop: 4 }}>
+            <div className="dashboard-utility-right">
               <div id="dashboard-utility-actions" />
               <div className="dashboard-user">
                 <div className="dashboard-user-info">
