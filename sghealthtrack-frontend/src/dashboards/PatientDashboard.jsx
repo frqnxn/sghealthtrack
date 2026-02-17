@@ -2164,7 +2164,10 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   async function loadMedicalProcessFromLatestApproved(appts) {
     const getByStatus = (status) => (appts || []).find((x) => statusKey(x) === status);
     const ready =
-      getByStatus("arrived") || getByStatus("ready_for_triage") || getByStatus("awaiting_forms");
+      getByStatus("arrived") ||
+      getByStatus("ready_for_triage") ||
+      getByStatus("awaiting_forms") ||
+      getByStatus("approved");
     if (!ready) {
       setActiveApprovedAppt(null);
       setStepsRow(null);
@@ -3658,7 +3661,7 @@ async function upsertFormSlipForAppointment(appointmentId) {
             {!formSlipAppointment ? (
               <div className="card">
                 <p style={{ opacity: 0.8, margin: 0 }}>
-                  Medical process will appear once your appointment is <b>checked in by the receptionist</b>.
+                  Medical process will appear once your appointment is <b>approved</b>.
                 </p>
               </div>
             ) : activeApprovedAppt && canDownloadReport(stepsRow) ? (
@@ -3734,7 +3737,7 @@ async function upsertFormSlipForAppointment(appointmentId) {
                 ) : (
                   <div className="card">
                     <p style={{ opacity: 0.8, margin: 0 }}>
-                      Medical process will appear after you are checked in on your scheduled date.
+                      Medical process will appear once your appointment is approved.
                     </p>
                   </div>
                 )}
