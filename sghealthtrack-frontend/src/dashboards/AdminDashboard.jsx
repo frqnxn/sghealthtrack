@@ -1466,6 +1466,13 @@ export default function AdminDashboard({
       : {};
 
     const ok = await setWorkflowStatus(approveAppt, "approved", null, scheduledISO, assignPayload);
+    if (ok) {
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("appointment_steps")
+        .update({ registration_status: "completed", updated_at: nowIso })
+        .eq("appointment_id", approveAppt.id);
+    }
     if (ok && allowReceptionistActions) {
       setAppointments((prev) => prev.filter((x) => x.id !== approveAppt.id));
     }
