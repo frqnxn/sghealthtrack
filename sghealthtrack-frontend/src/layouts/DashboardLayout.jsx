@@ -89,7 +89,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
       setPrivacyChecked(false);
     } else if (userId) {
       const key = `sghealthtrack_privacy_ack_${userId}`;
-      const acknowledged = localStorage.getItem(key) === "true";
+      const acknowledged = sessionStorage.getItem(key) === "true";
       setPrivacyOpen(!acknowledged);
       setPrivacyChecked(false);
     } else {
@@ -148,7 +148,7 @@ export default function DashboardLayout({ session, role, onLogout }) {
     const userId = session?.user?.id;
     if (!userId) return;
     const key = `sghealthtrack_privacy_ack_${userId}`;
-    localStorage.setItem(key, "true");
+    sessionStorage.setItem(key, "true");
     setPrivacyOpen(false);
     setPrivacyChecked(false);
   };
