@@ -1487,7 +1487,7 @@ export default function AdminDashboard({
 
   async function confirmArrival(appointment) {
     if (!appointment) return;
-    if (!isSameDay(appointment.scheduled_at)) {
+    if (!allowReceptionistActions && !isSameDay(appointment.scheduled_at)) {
       setMsg("Arrival can only be confirmed on the scheduled date.");
       return;
     }
@@ -2108,7 +2108,8 @@ export default function AdminDashboard({
                     const req = requirementsMap[a.id];
                     const formDone = isFormDoneFromReq(req);
                     const formText = req ? (formDone ? "Done" : "Not yet") : "Checking...";
-                    const canConfirmToday = ws === "approved" && formDone && isSameDay(a.scheduled_at);
+                    const canConfirmToday =
+                      ws === "approved" && formDone && (allowReceptionistActions || isSameDay(a.scheduled_at));
                     const labList = [
                       req?.exam_physical ? "Physical Exam" : null,
                       req?.exam_visual_acuity ? "Visual Acuity" : null,
