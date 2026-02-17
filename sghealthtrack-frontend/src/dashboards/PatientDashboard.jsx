@@ -359,6 +359,58 @@ function normalizeRequirements(row) {
   };
 }
 
+function extractItemIds(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => (typeof item === "string" ? item : item?.id)).filter(Boolean);
+}
+
+function computeTotalsFromReqRow(reqRow) {
+  if (!reqRow) return null;
+  if (typeof reqRow.total_estimate === "number") {
+    return {
+      package_code: reqRow.package_code || "",
+      package_price: typeof reqRow.package_price === "number" ? reqRow.package_price : null,
+      standard_total: typeof reqRow.standard_total === "number" ? reqRow.standard_total : null,
+      extra_standard_total:
+        typeof reqRow.extra_standard_total === "number" ? reqRow.extra_standard_total : null,
+      total_estimate: reqRow.total_estimate,
+    };
+  }
+
+  const customIds = extractItemIds(reqRow.lab_custom_items);
+  const xrayIds = extractItemIds(reqRow.xray_custom_items);
+  const custom_total = calcCustomTotal(getCustomItemsByIds(customIds));
+  const xray_total = calcCustomTotal(getXrayItemsByIds(xrayIds));
+
+  const inferredPackage =
+    reqRow.package_code ||
+    (customIds.length > 0 || xrayIds.length > 0 ? "CUSTOM" : "A");
+  const package_code = String(inferredPackage || "CUSTOM").toUpperCase();
+  const package_price = PACKAGE_PRICES[package_code] || 0;
+
+  const standardSelectedKeys = ALL_KEYS.filter((k) => !!reqRow[k]);
+  const standard_total = standardSelectedKeys.reduce(
+    (sum, k) => sum + (STANDARD_TEST_PRICES[k] || 0),
+    0
+  );
+  const packageIncluded = PACKAGE_MAP[package_code] ? Object.keys(PACKAGE_MAP[package_code]) : [];
+  const extra_standard_total =
+    package_code === "CUSTOM"
+      ? standard_total
+      : standardSelectedKeys.reduce(
+          (sum, k) => sum + (packageIncluded.includes(k) ? 0 : STANDARD_TEST_PRICES[k] || 0),
+          0
+        );
+
+  return {
+    package_code,
+    package_price,
+    standard_total,
+    extra_standard_total,
+    total_estimate: package_price + (custom_total || 0) + (xray_total || 0) + extra_standard_total,
+  };
+}
+
 const PACKAGE_PRICES = {
   A: 900,
   B: 1300,
@@ -1685,11 +1737,14 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   const formSlipAppointment = activeApprovedAppt || latestValidAppt;
   const formSlipLocked = formSlipAppointment ? isScheduleConfirmed(formSlipAppointment) : false;
-  const formSlipReqRow = activeApprovedAppt ? reqRow : pendingReqRow;
+  const formSlipReqRow = activeApprovedAppt
+    ? reqRow || requirementsByAppt?.[activeApprovedAppt.id]
+    : pendingReqRow;
   const payableAppointment = activeApprovedAppt;
   const paymentDoneNow = String(stepsRow?.payment_status || "").toLowerCase() === "completed";
+  const computedTotals = useMemo(() => computeTotalsFromReqRow(formSlipReqRow), [formSlipReqRow]);
   const paymentTotal =
-    typeof formSlipReqRow?.total_estimate === "number" ? formSlipReqRow.total_estimate : null;
+    typeof computedTotals?.total_estimate === "number" ? computedTotals.total_estimate : null;
 
   useEffect(() => {
     if (typeof paymentTotal === "number" && paymentTotal > 0) {
