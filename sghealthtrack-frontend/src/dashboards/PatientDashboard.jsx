@@ -1227,6 +1227,7 @@ function canDownloadReport(stepsRow) {
 export default function PatientDashboard({ session, page = "dashboard" }) {
   const navigate = useNavigate();
   const patientId = session?.user?.id;
+  const API_BASE = import.meta.env.VITE_API_URL || "";
   const [profile, setProfile] = useState(null);
 
   function patientName() {
@@ -1275,6 +1276,9 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   const [formSlipSaving, setFormSlipSaving] = useState(false);
   const [bookingConfirmOpen, setBookingConfirmOpen] = useState(false);
   const [bookingConfirmInfo, setBookingConfirmInfo] = useState(null);
+  const [paymentMode, setPaymentMode] = useState("cash"); // cash | online
+  const [onlineAmount, setOnlineAmount] = useState("");
+  const [qrState, setQrState] = useState({ loading: false, data: null, error: "" });
 
   // ✅ form slip draft
   const [formDraft, setFormDraft] = useState({
@@ -1681,6 +1685,14 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   const formSlipAppointment = activeApprovedAppt || latestValidAppt;
   const formSlipLocked = formSlipAppointment ? isScheduleConfirmed(formSlipAppointment) : false;
   const formSlipReqRow = activeApprovedAppt ? reqRow : pendingReqRow;
+  const payableAppointment = activeApprovedAppt || latestValidAppt;
+  const paymentDoneNow = String(stepsRow?.payment_status || "").toLowerCase() === "completed";
+
+  useEffect(() => {
+    if (typeof formSlipReqRow?.total_estimate === "number" && formSlipReqRow.total_estimate > 0) {
+      setOnlineAmount(String(formSlipReqRow.total_estimate));
+    }
+  }, [formSlipReqRow?.total_estimate]);
 
   function dateKey(d) {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -1830,6 +1842,52 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     const { error } = await supabase.auth.signOut();
     setSavingSettings(false);
     if (error) return setSettingsMsg("Logout failed: " + error.message);
+  }
+
+  async function generateQrPayment() {
+    setMsg("");
+    setQrState({ loading: false, data: null, error: "" });
+
+    if (!payableAppointment?.id) {
+      return setMsg("No payable appointment found. Please book and wait for approval.");
+    }
+    if (paymentDoneNow) {
+      return setMsg("Payment already completed for this appointment.");
+    }
+
+    const amountValue = Number(onlineAmount);
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      return setMsg("Enter a valid amount for online payment.");
+    }
+
+    const token = session?.access_token;
+    if (!token) return setMsg("Missing session token. Please re-login.");
+
+    setQrState({ loading: true, data: null, error: "" });
+    try {
+      const resp = await fetch(`${API_BASE}/api/payments/qrph/mock`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          appointment_id: payableAppointment.id,
+          amount: amountValue,
+        }),
+      });
+      const payload = await resp.json();
+      if (!resp.ok) {
+        setQrState({ loading: false, data: null, error: payload?.error || "Failed to generate QR." });
+        return;
+      }
+
+      setQrState({ loading: false, data: payload?.qr || null, error: "" });
+      setMsg("Payment completed. OR and reference generated.");
+      await loadAll();
+    } catch (err) {
+      setQrState({ loading: false, data: null, error: "Failed to generate QR. Please try again." });
+    }
   }
 
   async function loadProfile() {
@@ -2333,7 +2391,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
     const p = await supabase
       .from("payments")
-      .select("id, patient_id, appointment_id, recorded_at, payment_status, or_number, amount, notes")
+      .select("id, patient_id, appointment_id, recorded_at, payment_status, or_number, reference_no, payment_method, amount, notes")
       .eq("patient_id", patientId)
       .order("recorded_at", { ascending: false });
 
@@ -3988,6 +4046,113 @@ async function upsertFormSlipForAppointment(appointmentId) {
             <div className="card" style={{ marginTop: 14 }}>
               <div className="section-header section-header-row">
                 <div>
+                  <h3 className="section-title">Payment Options</h3>
+                  <p className="section-subtitle">Choose how you want to pay for your appointment.</p>
+                </div>
+              </div>
+              {!payableAppointment ? (
+                <div style={{ opacity: 0.75 }}>
+                  No payable appointment found. Please book and wait for approval.
+                </div>
+              ) : paymentDoneNow ? (
+                <div style={{ opacity: 0.85 }}>
+                  Payment is already completed for this appointment. You may proceed to the next step.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      className={`btn ${paymentMode === "cash" ? "btn-primary" : "btn-secondary"}`}
+                      type="button"
+                      onClick={() => setPaymentMode("cash")}
+                    >
+                      Pay at Clinic (Cash)
+                    </button>
+                    <button
+                      className={`btn ${paymentMode === "online" ? "btn-primary" : "btn-secondary"}`}
+                      type="button"
+                      onClick={() => setPaymentMode("online")}
+                    >
+                      Pay Online (QR PH)
+                    </button>
+                  </div>
+
+                  {paymentMode === "cash" ? (
+                    <div style={{ marginTop: 10, opacity: 0.8 }}>
+                      Proceed to the cashier to complete your payment. The payment status will update once confirmed.
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+                        <div>
+                          <label className="settings-label" style={{ marginBottom: 6 }}>
+                            Amount
+                          </label>
+                          <input
+                            className="input"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={onlineAmount}
+                            onChange={(e) => setOnlineAmount(e.target.value)}
+                            placeholder="Enter amount"
+                          />
+                        </div>
+                        <button
+                          className="btn btn-primary"
+                          type="button"
+                          onClick={generateQrPayment}
+                          disabled={qrState.loading}
+                          style={{ alignSelf: "flex-end" }}
+                        >
+                          {qrState.loading ? "Generating..." : "Generate QR"}
+                        </button>
+                      </div>
+
+                      {qrState.error ? (
+                        <div style={{ marginTop: 10, color: "#b91c1c" }}>{qrState.error}</div>
+                      ) : null}
+
+                      {qrState.data ? (
+                        <div
+                          style={{
+                            marginTop: 14,
+                            display: "grid",
+                            gridTemplateColumns: "minmax(200px, 280px) 1fr",
+                            gap: 16,
+                            alignItems: "center",
+                          }}
+                        >
+                          <img
+                            src={qrState.data.data_url}
+                            alt="QR PH"
+                            style={{ width: "100%", maxWidth: 260, borderRadius: 12, border: "1px solid #e2e8f0" }}
+                          />
+                          <div style={{ lineHeight: 1.6 }}>
+                            <div>
+                              Amount: <b>{formatPeso(qrState.data.amount)}</b>
+                            </div>
+                            <div>
+                              Reference #: <b>{qrState.data.reference_no}</b>
+                            </div>
+                            <div>
+                              OR #: <b>{qrState.data.or_number}</b>
+                            </div>
+                            <div style={{ opacity: 0.75, fontSize: 13 }}>
+                              Auto-approved by cashier (mock). You may proceed to the next step.
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="card" style={{ marginTop: 14 }}>
+              <div className="section-header section-header-row">
+                <div>
                   <h3 className="section-title">Payments History</h3>
                   <p className="section-subtitle">Track your payment status and receipts.</p>
                 </div>
@@ -4001,6 +4166,8 @@ async function upsertFormSlipForAppointment(appointmentId) {
                       <th>Appointment</th>
                       <th>Status</th>
                       <th>OR #</th>
+                      <th>Reference #</th>
+                      <th>Method</th>
                       <th>Amount</th>
                       <th>Notes</th>
                     </tr>
@@ -4008,7 +4175,7 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   <tbody>
                     {payments.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ opacity: 0.7 }}>
+                        <td colSpan="9" style={{ opacity: 0.7 }}>
                           No payment records yet.
                         </td>
                       </tr>
@@ -4016,7 +4183,8 @@ async function upsertFormSlipForAppointment(appointmentId) {
                       payments.map((p) => {
                         const appt = appointmentById.get(p.appointment_id);
                         const paymentStatus = String(p.payment_status || "").toLowerCase();
-                        const paymentTone = paymentStatus === "paid" ? "completed" : "pending";
+                        const paymentTone =
+                          paymentStatus === "paid" || paymentStatus === "completed" ? "completed" : "pending";
                         return (
                           <tr key={p.id}>
                             <td data-label="Patient Name">
@@ -4028,6 +4196,8 @@ async function upsertFormSlipForAppointment(appointmentId) {
                               <span className={`status-pill status-${paymentTone}`}>{p.payment_status}</span>
                             </td>
                             <td data-label="OR #">{p.or_number ?? "—"}</td>
+                            <td data-label="Reference #">{p.reference_no ?? "—"}</td>
+                            <td data-label="Method">{(p.payment_method || "cash").replaceAll("_", " ").toUpperCase()}</td>
                             <td data-label="Amount">{p.amount ?? "—"}</td>
                             <td data-label="Notes">{p.notes ?? "—"}</td>
                           </tr>

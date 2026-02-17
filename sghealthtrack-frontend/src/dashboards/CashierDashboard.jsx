@@ -379,7 +379,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
     const { data, error } = await supabase
       .from("payments")
       .select(
-        "appointment_id, recorded_at, payment_status, or_number, amount, notes, patient_id, payment_method, package_availed, package_name"
+        "appointment_id, recorded_at, payment_status, or_number, reference_no, amount, notes, patient_id, payment_method, package_availed, package_name"
       )
       .in("appointment_id", ids)
       .order("recorded_at", { ascending: false });
@@ -402,7 +402,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
     const { data, error } = await supabase
       .from("payments")
       .select(
-        "id, recorded_at, payment_status, or_number, amount, notes, recorded_by, package_availed, package_name, payment_method"
+        "id, recorded_at, payment_status, or_number, reference_no, amount, notes, recorded_by, package_availed, package_name, payment_method"
       )
       .eq("appointment_id", appointmentId)
       .order("recorded_at", { ascending: false })
@@ -428,7 +428,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
     if (!patientId) return;
     const { data, error } = await supabase
       .from("payments")
-      .select("id, recorded_at, payment_status, or_number, amount, notes, payment_method")
+      .select("id, recorded_at, payment_status, or_number, reference_no, amount, notes, payment_method")
       .eq("patient_id", patientId)
       .order("recorded_at", { ascending: false })
       .limit(10);
@@ -933,6 +933,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
                         )}
                       </div>
                       <div>OR #: {latest.or_number ?? "—"}</div>
+                      <div>Reference No: {latest.reference_no ?? "—"}</div>
                       <div>Amount: {latest.amount ?? "—"}</div>
                       <div>Notes: {latest.notes ?? "—"}</div>
                       <div>
@@ -966,6 +967,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
                             <th>Date</th>
                             <th>Status</th>
                             <th>OR No.</th>
+                            <th>Reference</th>
                             <th>Amount</th>
                             <th>Method</th>
                           </tr>
@@ -976,6 +978,7 @@ export default function CashierDashboard({ session, page = "payments" }) {
                               <td>{p.recorded_at ? new Date(p.recorded_at).toLocaleString() : "—"}</td>
                               <td>{String(p.payment_status || "").toUpperCase()}</td>
                               <td>{p.or_number ?? "—"}</td>
+                              <td>{p.reference_no ?? "—"}</td>
                               <td>{p.amount != null ? toMoney(p.amount) : "—"}</td>
                               <td>{(p.payment_method || "cash").replaceAll("_", " ").toUpperCase()}</td>
                             </tr>
