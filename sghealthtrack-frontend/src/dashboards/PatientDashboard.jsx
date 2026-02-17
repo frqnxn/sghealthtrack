@@ -732,6 +732,31 @@ function calcCustomTotal(items) {
   return items.reduce((sum, item) => sum + (typeof item.price === "number" ? item.price : 0), 0);
 }
 
+function buildFallbackQrData({ amount, referenceNo, orNumber }) {
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  const ref = referenceNo || "QRPH-REF";
+  const orNo = orNumber || "OR-000000";
+  const svg = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260">',
+    '<rect width="260" height="260" fill="#ffffff"/>',
+    '<rect x="12" y="12" width="236" height="236" fill="#f0fdf9" stroke="#0f766e" stroke-width="2"/>',
+    '<text x="130" y="52" text-anchor="middle" font-family="Arial" font-size="14" fill="#0f172a">QR PH</text>',
+    `<text x="130" y="86" text-anchor="middle" font-family="Arial" font-size="12" fill="#0f172a">Amount: PHP ${safeAmount}</text>`,
+    `<text x="130" y="110" text-anchor="middle" font-family="Arial" font-size="10" fill="#0f172a">Ref: ${ref}</text>`,
+    `<text x="130" y="132" text-anchor="middle" font-family="Arial" font-size="10" fill="#0f172a">OR: ${orNo}</text>`,
+    '<rect x="60" y="150" width="140" height="80" fill="#0f766e" opacity="0.12"/>',
+    '</svg>',
+  ].join("");
+  const dataUrl = `data:image/svg+xml;base64,${btoa(svg)}`;
+  return {
+    data_url: dataUrl,
+    amount: safeAmount,
+    reference_no: ref,
+    or_number: orNo,
+    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+  };
+}
+
 const XRAY_ITEMS = [
   { label: "ANKLE AP/LAT", price: 450 },
   { label: "APICOLORDOTIC VIEW", price: 200 },
@@ -1933,13 +1958,44 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
           amount: paymentTotal,
         }),
       });
-      const payload = await resp.json();
+      const raw = await resp.text();
+      let payload = null;
+      if (raw) {
+        try {
+          payload = JSON.parse(raw);
+        } catch (parseErr) {
+          payload = null;
+        }
+      }
+
       if (!resp.ok) {
         setQrState({ loading: false, data: null, error: payload?.error || "Failed to generate QR." });
         return;
       }
 
-      setQrState({ loading: false, data: payload?.qr || null, error: "" });
+      let qrData = payload?.qr || null;
+      if (!qrData) {
+        const { data: latest } = await supabase
+          .from("payments")
+          .select("reference_no, or_number, amount")
+          .eq("appointment_id", payableAppointment.id)
+          .order("recorded_at", { ascending: false })
+          .limit(1);
+        if (latest?.length) {
+          qrData = buildFallbackQrData({
+            amount: latest[0].amount,
+            referenceNo: latest[0].reference_no,
+            orNumber: latest[0].or_number,
+          });
+        }
+      }
+
+      if (!qrData) {
+        setQrState({ loading: false, data: null, error: "QR service returned empty response." });
+        return;
+      }
+
+      setQrState({ loading: false, data: qrData, error: "" });
       setMsg("Payment completed. OR and reference generated.");
       await loadAll();
     } catch (err) {
