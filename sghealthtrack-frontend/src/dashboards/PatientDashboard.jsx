@@ -1975,6 +1975,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
       let qrData = payload?.qr || null;
       if (!qrData) {
+        await loadAll();
         const { data: latest } = await supabase
           .from("payments")
           .select("reference_no, or_number, amount")
@@ -1986,6 +1987,12 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
             amount: latest[0].amount,
             referenceNo: latest[0].reference_no,
             orNumber: latest[0].or_number,
+          });
+        } else {
+          qrData = buildFallbackQrData({
+            amount: paymentTotal,
+            referenceNo: `QRPH-${Date.now()}`,
+            orNumber: `OR-${Date.now()}`,
           });
         }
       }
