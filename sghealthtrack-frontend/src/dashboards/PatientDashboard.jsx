@@ -3658,10 +3658,10 @@ async function upsertFormSlipForAppointment(appointmentId) {
             {!formSlipAppointment ? (
               <div className="card">
                 <p style={{ opacity: 0.8, margin: 0 }}>
-                  Medical process will appear once your appointment is <b>confirmed by admin</b> on your booking date.
+                  Medical process will appear once your appointment is <b>checked in by the receptionist</b>.
                 </p>
               </div>
-            ) : canDownloadReport(stepsRow) ? (
+            ) : activeApprovedAppt && canDownloadReport(stepsRow) ? (
               <div className="card">
                 <b>Medical Examination Process</b>
                 <div style={{ marginTop: 8, opacity: 0.8, lineHeight: 1.6 }}>
@@ -3731,7 +3731,13 @@ async function upsertFormSlipForAppointment(appointmentId) {
                       </p>
                     </div>
                   )
-                ) : null}
+                ) : (
+                  <div className="card">
+                    <p style={{ opacity: 0.8, margin: 0 }}>
+                      Medical process will appear after you are checked in on your scheduled date.
+                    </p>
+                  </div>
+                )}
               </>
             )}
           </div>
