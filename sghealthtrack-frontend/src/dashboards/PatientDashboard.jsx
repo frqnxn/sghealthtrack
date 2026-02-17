@@ -2163,12 +2163,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   async function loadMedicalProcessFromLatestApproved(appts) {
     const candidates = (appts || []).filter((a) => !isReleasedByStatus(a?.status));
-    const getByStatus = (status) => candidates.find((x) => statusKey(x) === status);
-    const ready =
-      getByStatus("arrived") ||
-      getByStatus("ready_for_triage") ||
-      getByStatus("awaiting_forms") ||
-      getByStatus("approved");
+    const readyStatuses = new Set(["approved", "awaiting_forms", "ready_for_triage", "arrived"]);
+    const ready = candidates.find((appt) => readyStatuses.has(statusKey(appt)));
     if (!ready) {
       setActiveApprovedAppt(null);
       setStepsRow(null);
