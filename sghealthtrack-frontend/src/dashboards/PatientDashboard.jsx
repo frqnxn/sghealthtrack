@@ -3664,7 +3664,9 @@ async function upsertFormSlipForAppointment(appointmentId) {
                   Medical process will appear once your appointment is <b>approved</b>.
                 </p>
               </div>
-            ) : activeApprovedAppt && canDownloadReport(stepsRow) ? (
+            ) : activeApprovedAppt &&
+              isReleasedByStatus(activeApprovedAppt.status) &&
+              canDownloadReport(stepsRow) ? (
               <div className="card">
                 <b>Medical Examination Process</b>
                 <div style={{ marginTop: 8, opacity: 0.8, lineHeight: 1.6 }}>
