@@ -284,6 +284,9 @@ app.post("/api/payments/qrph/mock", requireAuth, async (req, res) => {
     if (["rejected", "cancelled", "canceled"].includes(status)) {
       return res.status(400).json({ error: "Cannot pay for a rejected/cancelled appointment" });
     }
+    if (status !== "arrived") {
+      return res.status(400).json({ error: "Payment is only available after check-in." });
+    }
 
     const { data: existing } = await supabaseService
       .from("payments")

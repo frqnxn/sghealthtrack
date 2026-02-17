@@ -923,8 +923,8 @@ function FormSlipCard({ appointment, draft, setDraft, saving, onSave, submitted 
           </div>
 
           <div style={{ marginTop: 6, opacity: 0.8, fontSize: 13, lineHeight: 1.4 }}>
-            Fill this up after your appointment is approved. Your Medical Process will show the
-            required lab and x-ray steps based on what you select here.
+            Fill this up after your appointment is approved. Your Medical Process and payment steps will show
+            after you are checked in on the scheduled date.
           </div>
 
           <div style={{ marginTop: 8, opacity: 0.8, fontSize: 13 }}>
@@ -1652,7 +1652,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   const DAILY_CAPACITY = 10;
   const statusKey = (appt) => String(appt?.workflow_status || appt?.status || "").toLowerCase();
-  const isScheduleConfirmed = (appt) => ["approved", "ready_for_triage", "awaiting_forms"].includes(statusKey(appt));
+  const isScheduleConfirmed = (appt) =>
+    ["approved", "ready_for_triage", "awaiting_forms", "arrived"].includes(statusKey(appt));
 
   function dateOnly(value) {
     if (!value) return "";
@@ -1685,14 +1686,16 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   const formSlipAppointment = activeApprovedAppt || latestValidAppt;
   const formSlipLocked = formSlipAppointment ? isScheduleConfirmed(formSlipAppointment) : false;
   const formSlipReqRow = activeApprovedAppt ? reqRow : pendingReqRow;
-  const payableAppointment = activeApprovedAppt || latestValidAppt;
+  const payableAppointment = activeApprovedAppt;
   const paymentDoneNow = String(stepsRow?.payment_status || "").toLowerCase() === "completed";
+  const paymentTotal =
+    typeof formSlipReqRow?.total_estimate === "number" ? formSlipReqRow.total_estimate : null;
 
   useEffect(() => {
-    if (typeof formSlipReqRow?.total_estimate === "number" && formSlipReqRow.total_estimate > 0) {
-      setOnlineAmount(String(formSlipReqRow.total_estimate));
+    if (typeof paymentTotal === "number" && paymentTotal > 0) {
+      setOnlineAmount(String(paymentTotal));
     }
-  }, [formSlipReqRow?.total_estimate]);
+  }, [paymentTotal]);
 
   function dateKey(d) {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -1855,9 +1858,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
       return setMsg("Payment already completed for this appointment.");
     }
 
-    const amountValue = Number(onlineAmount);
-    if (!Number.isFinite(amountValue) || amountValue <= 0) {
-      return setMsg("Enter a valid amount for online payment.");
+    if (!Number.isFinite(paymentTotal) || paymentTotal <= 0) {
+      return setMsg("Payment total is not available yet. Please complete the Form Slip.");
     }
 
     const token = session?.access_token;
@@ -1873,7 +1875,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
         },
         body: JSON.stringify({
           appointment_id: payableAppointment.id,
-          amount: amountValue,
+          amount: paymentTotal,
         }),
       });
       const payload = await resp.json();
@@ -1953,7 +1955,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     const payload = {
       appointment_id: appointmentId,
       patient_id: patientId,
-      registration_status: "completed",
+      registration_status: "pending",
       triage_status: "pending",
       lab_status: "pending",
       xray_status: "pending",
@@ -1997,7 +1999,7 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
     if (error) return { ok: false, error: error.message };
 
-    const occupying = ["approved", "awaiting_forms", "ready_for_triage"];
+    const occupying = ["approved", "awaiting_forms", "ready_for_triage", "arrived"];
     const conflict = (data || []).some((a) => {
       const ws = toLower(a.workflow_status || a.status);
       return occupying.includes(ws);
@@ -2161,7 +2163,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
   async function loadMedicalProcessFromLatestApproved(appts) {
     const getByStatus = (status) => (appts || []).find((x) => statusKey(x) === status);
-    const ready = getByStatus("ready_for_triage") || getByStatus("approved") || getByStatus("awaiting_forms");
+    const ready =
+      getByStatus("arrived") || getByStatus("ready_for_triage") || getByStatus("awaiting_forms");
     if (!ready) {
       setActiveApprovedAppt(null);
       setStepsRow(null);
@@ -2515,9 +2518,9 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
       patient_id: patientId,
       appointment_type: type,
       preferred_date: preferredDateTime,
-      scheduled_at: scheduledISO,
-      workflow_status: "approved",
-      status: "approved",
+      scheduled_at: null,
+      workflow_status: "pending",
+      status: "pending",
       rejection_reason: null,
     };
 
@@ -2535,10 +2538,10 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
       }
     }
 
-    setMsg("Appointment approved and scheduled.");
+    setMsg("Appointment request sent. Please wait for approval.");
     setBookingConfirmInfo({
       appointment_type: type,
-      scheduled_at: scheduledISO,
+      scheduled_at: null,
       preferred_date: preferredDateTime,
     });
     setBookingConfirmOpen(true);
@@ -3136,9 +3139,9 @@ async function upsertFormSlipForAppointment(appointmentId) {
           <div className="modal-card" style={{ maxWidth: 520 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 16 }}>Booking Confirmed</div>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>Booking Request Sent</div>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  Your appointment is approved and scheduled. Please wait for the day of your check‑up.
+                  Your request was sent. Please wait for receptionist approval and schedule confirmation.
                 </div>
               </div>
               <button className="btn btn-secondary" onClick={() => setBookingConfirmOpen(false)}>
@@ -4052,7 +4055,7 @@ async function upsertFormSlipForAppointment(appointmentId) {
               </div>
               {!payableAppointment ? (
                 <div style={{ opacity: 0.75 }}>
-                  No payable appointment found. Please book and wait for approval.
+                  Payment is available after you are checked in on your scheduled date.
                 </div>
               ) : paymentDoneNow ? (
                 <div style={{ opacity: 0.85 }}>
@@ -4077,37 +4080,43 @@ async function upsertFormSlipForAppointment(appointmentId) {
                     </button>
                   </div>
 
-                  {paymentMode === "cash" ? (
-                    <div style={{ marginTop: 10, opacity: 0.8 }}>
-                      Proceed to the cashier to complete your payment. The payment status will update once confirmed.
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-                        <div>
-                          <label className="settings-label" style={{ marginBottom: 6 }}>
-                            Amount
-                          </label>
-                          <input
-                            className="input"
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={onlineAmount}
-                            onChange={(e) => setOnlineAmount(e.target.value)}
-                            placeholder="Enter amount"
-                          />
-                        </div>
-                        <button
-                          className="btn btn-primary"
-                          type="button"
-                          onClick={generateQrPayment}
-                          disabled={qrState.loading}
-                          style={{ alignSelf: "flex-end" }}
-                        >
-                          {qrState.loading ? "Generating..." : "Generate QR"}
-                        </button>
-                      </div>
+            {paymentMode === "cash" ? (
+              <div style={{ marginTop: 10, opacity: 0.8 }}>
+                Proceed to the cashier to complete your payment. The payment status will update once confirmed.
+              </div>
+            ) : (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+                  <div>
+                    <label className="settings-label" style={{ marginBottom: 6 }}>
+                      Amount
+                    </label>
+                    <input
+                      className="input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={onlineAmount}
+                      onChange={(e) => setOnlineAmount(e.target.value)}
+                      readOnly={Number.isFinite(paymentTotal)}
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={generateQrPayment}
+                    disabled={qrState.loading || !Number.isFinite(paymentTotal)}
+                    style={{ alignSelf: "flex-end" }}
+                  >
+                    {qrState.loading ? "Generating..." : "Generate QR"}
+                  </button>
+                </div>
+                {!Number.isFinite(paymentTotal) ? (
+                  <div style={{ marginTop: 8, opacity: 0.7 }}>
+                    Please complete the Form Slip so the total amount can be computed.
+                  </div>
+                ) : null}
 
                       {qrState.error ? (
                         <div style={{ marginTop: 10, color: "#b91c1c" }}>{qrState.error}</div>

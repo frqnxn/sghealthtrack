@@ -183,6 +183,9 @@ function getPackageInfo(req) {
 
 function computeAmountFromReq(req) {
   if (!req) return null;
+  if (typeof req.total_estimate === "number" && req.total_estimate > 0) {
+    return req.total_estimate;
+  }
   const pkg = getPackageInfo(req);
   const labTotal = Number(req.lab_custom_total || 0);
   const xrayTotal = Number(req.xray_custom_total || 0);
@@ -345,8 +348,8 @@ export default function CashierDashboard({ session, page = "payments" }) {
         )
       `
       )
-      // ✅ Cashier should only see appointments waiting for payment
-      .eq("appointments.status", "approved")
+      // ✅ Cashier should only see arrived appointments waiting for payment
+      .eq("appointments.workflow_status", "arrived")
       .order("updated_at", { ascending: false });
 
     if (error) {

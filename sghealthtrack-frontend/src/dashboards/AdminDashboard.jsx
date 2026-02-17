@@ -129,6 +129,7 @@ function formatWorkflowLabel(value) {
   const s = String(value || "").trim();
   if (!s) return "—";
   const lower = s.toLowerCase();
+  if (lower === "arrived") return "Arrived (Checked In)";
   if (lower === "ready_for_triage") return "Ready for Screening";
   if (lower === "awaiting_forms") return "Awaiting Forms";
   const spaced = lower.replace(/_/g, " ").replace(/\btriage\b/g, "screening");
@@ -649,9 +650,15 @@ function AvailabilityCalendar({
 /* ---------------------------------------------------------
    Admin Dashboard
 --------------------------------------------------------- */
-export default function AdminDashboard({ session, page = "patients", appointmentsBasePath = "/admin/appointments" }) {
+export default function AdminDashboard({
+  session,
+  page = "patients",
+  appointmentsBasePath = "/admin/appointments",
+  approvalsEnabled = false,
+}) {
   const navigate = useNavigate();
   const tab = page || "patients";
+  const allowReceptionistActions = tab === "appointments" && approvalsEnabled;
   const [topbarActionsEl, setTopbarActionsEl] = useState(null);
   const [staffList, setStaffList] = useState(() => {
     try {
@@ -788,6 +795,13 @@ export default function AdminDashboard({ session, page = "patients", appointment
     setRejectPreset("No available slot");
     setRejectCustom("");
     setRejectError("");
+  }
+
+  function isSameDay(dateValue) {
+    if (!dateValue) return false;
+    const dt = new Date(dateValue);
+    if (Number.isNaN(dt.getTime())) return false;
+    return toDateKey(dt) === toDateKey(new Date());
   }
 
   function openApproveModal(a) {
@@ -1169,7 +1183,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
     const payload = {
       appointment_id: apptId,
       patient_id: appointment.patient_id,
-      registration_status: "completed",
+      registration_status: "pending",
       triage_status: "pending",
       lab_status: "pending",
       xray_status: "pending",
@@ -1242,7 +1256,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
     const start = new Date(y, m, 1, 0, 0, 0, 0);
     const end = new Date(y, m + 1, 1, 0, 0, 0, 0);
 
-    const occupying = ["approved", "awaiting_forms", "ready_for_triage"];
+    const occupying = ["approved", "awaiting_forms", "ready_for_triage", "arrived"];
 
     const { data, error } = await supabase
       .from("appointments")
@@ -1364,7 +1378,10 @@ export default function AdminDashboard({ session, page = "patients", appointment
       }
     }
 
-    const legacyStatus = workflow_status === "ready_for_triage" ? "approved" : workflow_status;
+    const legacyStatus =
+      workflow_status === "ready_for_triage" || workflow_status === "arrived"
+        ? "approved"
+        : workflow_status;
 
     const { error } = await supabase
       .from("appointments")
@@ -1382,7 +1399,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
       return;
     }
 
-    if (workflow_status === "approved" || workflow_status === "rejected") {
+    if (workflow_status === "rejected") {
       setAppointments((prev) => prev.filter((x) => x.id !== appointment.id));
     } else {
       setAppointments((prev) =>
@@ -1467,6 +1484,10 @@ export default function AdminDashboard({ session, page = "patients", appointment
 
   async function confirmArrival(appointment) {
     if (!appointment) return;
+    if (!isSameDay(appointment.scheduled_at)) {
+      setMsg("Arrival can only be confirmed on the scheduled date.");
+      return;
+    }
     let req = requirementsMap[appointment.id];
     if (!req) {
       const { data } = await supabase
@@ -1493,6 +1514,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
             "xray_chest",
             "lab_custom_items",
             "xray_custom_items",
+            "total_estimate",
           ].join(", ")
         )
         .eq("appointment_id", appointment.id)
@@ -1510,13 +1532,20 @@ export default function AdminDashboard({ session, page = "patients", appointment
 
     await ensureAppointmentSteps(appointment);
     await ensureAppointmentRequirements(appointment);
-    await setWorkflowStatus(appointment, "ready_for_triage");
+    await setWorkflowStatus(appointment, "arrived");
+
+    const nowIso = new Date().toISOString();
+    await supabase
+      .from("appointment_steps")
+      .update({ registration_status: "completed", updated_at: nowIso })
+      .eq("appointment_id", appointment.id);
+
     setAppointments((prev) => prev.filter((x) => x.id !== appointment.id));
 
     await createNotification(
       appointment.patient_id,
-      "Booking confirmed",
-      "Your appointment is confirmed for today. You can now proceed to your medical screening."
+      "Payment Required",
+      `You have checked in. Please proceed to payment (cashier or online).${typeof req?.total_estimate === "number" ? ` Amount due: PHP ${req.total_estimate}.` : ""}`
     );
   }
 
@@ -1659,8 +1688,6 @@ export default function AdminDashboard({ session, page = "patients", appointment
     let list = [...appointments];
     const statusKey = (x) => toLower(x.workflow_status || x.status);
 
-    // Once confirmed (ready_for_triage), remove from admin queue list
-    list = list.filter((a) => statusKey(a) !== "ready_for_triage");
     // Hide no-show records from history list
     list = list.filter((a) => (a.rejection_reason || "").toLowerCase() !== "no show");
     // Hide rejected/canceled appointments from the admin list
@@ -1705,7 +1732,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
   }, [appointments, filter, search, patientNameMap]);
 
   const bookedByDate = useMemo(() => {
-    const occupying = ["approved", "awaiting_forms", "ready_for_triage"];
+    const occupying = ["approved", "awaiting_forms", "ready_for_triage", "arrived"];
     const map = {};
     (appointments || []).forEach((a) => {
       const ws = toLower(a.workflow_status || a.status);
@@ -1855,7 +1882,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
         {msg && <p style={{ marginTop: 0 }}>{msg}</p>}
 
           {/* ===================== APPOINTMENTS TAB ===================== */}
-        {tab === "appointments" && (
+      {tab === "appointments" && (
             <>
           <div className="card" style={{ marginTop: 12 }}>
             <div className="analytics-header">
@@ -2032,6 +2059,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
               <option value="all">All (history)</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
+              <option value="arrived">Arrived</option>
               <option value="awaiting_forms">Awaiting Forms</option>
               <option value="ready_for_triage">Ready for Screening</option>
               <option value="released">Released</option>
@@ -2074,7 +2102,7 @@ export default function AdminDashboard({ session, page = "patients", appointment
                     const req = requirementsMap[a.id];
                     const formDone = isFormDoneFromReq(req);
                     const formText = req ? (formDone ? "Done" : "Not yet") : "Checking...";
-                    const canConfirmToday = ws === "approved" && formDone;
+                    const canConfirmToday = ws === "approved" && formDone && isSameDay(a.scheduled_at);
                     const labList = [
                       req?.exam_physical ? "Physical Exam" : null,
                       req?.exam_visual_acuity ? "Visual Acuity" : null,
@@ -2193,18 +2221,33 @@ export default function AdminDashboard({ session, page = "patients", appointment
                         </td>
                         <td data-label="Actions">
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => confirmArrival(a)}
-                              disabled={!canConfirmToday}
-                              title={
-                                canConfirmToday
-                                  ? "Confirm patient for today and start medical process."
-                                  : "Available only on the booking date after the Form Slip is completed."
-                              }
-                            >
-                              Confirm Today
-                            </button>
+                            {allowReceptionistActions && ws === "pending" ? (
+                              <>
+                                <button className="btn btn-approve" onClick={() => openApproveModal(a)}>
+                                  Approve
+                                </button>
+                                <button className="btn btn-reject" onClick={() => openRejectModal(a)}>
+                                  Reject
+                                </button>
+                              </>
+                            ) : null}
+                            {allowReceptionistActions && ws === "approved" ? (
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => confirmArrival(a)}
+                                disabled={!canConfirmToday}
+                                title={
+                                  canConfirmToday
+                                    ? "Mark as arrived and open payment."
+                                    : "Available only on the scheduled date after the Form Slip is completed."
+                                }
+                              >
+                                Mark Arrived
+                              </button>
+                            ) : null}
+                            {!allowReceptionistActions ? (
+                              <span style={{ opacity: 0.6, fontSize: 12 }}>Receptionist only</span>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -2587,257 +2630,264 @@ export default function AdminDashboard({ session, page = "patients", appointment
           )}
       </div>
 
-      {/* ===================== APPROVE MODAL ===================== */}
-      <Modal
-        open={approveOpen}
-        title="Approve Appointment"
-        onClose={closeApproveModal}
-        footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
-            <button className="btn" onClick={closeApproveModal}>
-              Cancel
-            </button>
-            <button className="btn btn-approve" onClick={confirmApproveFromModal}>
-              Approve
-            </button>
-          </div>
-        }
-      >
-        {!approveAppt ? null : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "start" }}>
-            {/* Left */}
-            <div className="card" style={{ padding: 14 }}>
-              <div style={{ fontWeight: 800, marginBottom: 10 }}>Appointment Details</div>
-
-              <div style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.6 }}>
-                <div>
-                  Patient: <b>{patientNameFromId(approveAppt.patient_id)}</b>
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.7, fontFamily: "monospace" }}>{approveAppt.patient_id}</div>
-                <div>
-                  Type: <b>{approveAppt.appointment_type}</b>
-                </div>
-                <div>
-                  Appointment Date: <b>{fmtDate(approveAppt.preferred_date)}</b>
-                </div>
+      {allowReceptionistActions ? (
+        <>
+          {/* ===================== APPROVE MODAL ===================== */}
+          <Modal
+            open={approveOpen}
+            title="Approve Appointment"
+            onClose={closeApproveModal}
+            footer={
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+                <button className="btn" onClick={closeApproveModal}>
+                  Cancel
+                </button>
+                <button className="btn btn-approve" onClick={confirmApproveFromModal}>
+                  Approve
+                </button>
               </div>
+            }
+          >
+            {!approveAppt ? null : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "start" }}>
+                {/* Left */}
+                <div className="card" style={{ padding: 14 }}>
+                  <div style={{ fontWeight: 800, marginBottom: 10 }}>Appointment Details</div>
 
-              <div style={{ marginTop: 14, display: "grid", gap: 6 }}>
-                <div style={{ fontSize: 12, opacity: 0.75 }}>Assign Doctor</div>
-                <select
-                  value={assignedDoctorId}
-                  onChange={(e) => setAssignedDoctorId(e.target.value)}
-                  style={{ width: "100%" }}
-                >
-                  <option value="">Select doctor…</option>
-                  {(doctorList || []).map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {formatDoctorLabel(d)}
-                    </option>
-                  ))}
-                </select>
-                {doctorLoading ? <div style={{ fontSize: 12, opacity: 0.7 }}>Loading doctors…</div> : null}
-                {assignedDoctorId ? (
-                  <div style={{ fontSize: 12, opacity: 0.85 }}>
-                    Availability:{" "}
-                    <b>
-                      {doctorAvailability === "available"
-                        ? "Available"
-                        : doctorAvailability === "busy"
-                        ? "Conflict at this time"
-                        : "—"}
-                    </b>
+                  <div style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.6 }}>
+                    <div>
+                      Patient: <b>{patientNameFromId(approveAppt.patient_id)}</b>
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.7, fontFamily: "monospace" }}>{approveAppt.patient_id}</div>
+                    <div>
+                      Type: <b>{approveAppt.appointment_type}</b>
+                    </div>
+                    <div>
+                      Appointment Date: <b>{fmtDate(approveAppt.preferred_date)}</b>
+                    </div>
                   </div>
-                ) : null}
-              </div>
 
-              <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
-                <input
-                  id="usepref"
-                  type="checkbox"
-                  checked={usePreferredDate}
-                  onChange={(e) => setUsePreferredDate(e.target.checked)}
-                />
-                <label htmlFor="usepref" style={{ cursor: "pointer", fontSize: 13, opacity: 0.9 }}>
-                  Use patient appointment date
-                </label>
-              </div>
+                  <div style={{ marginTop: 14, display: "grid", gap: 6 }}>
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>Assign Doctor</div>
+                    <select
+                      value={assignedDoctorId}
+                      onChange={(e) => setAssignedDoctorId(e.target.value)}
+                      style={{ width: "100%" }}
+                    >
+                      <option value="">Select doctor…</option>
+                      {(doctorList || []).map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {formatDoctorLabel(d)}
+                        </option>
+                      ))}
+                    </select>
+                    {doctorLoading ? <div style={{ fontSize: 12, opacity: 0.7 }}>Loading doctors…</div> : null}
+                    {assignedDoctorId ? (
+                      <div style={{ fontSize: 12, opacity: 0.85 }}>
+                        Availability:{" "}
+                        <b>
+                          {doctorAvailability === "available"
+                            ? "Available"
+                            : doctorAvailability === "busy"
+                            ? "Conflict at this time"
+                            : "—"}
+                        </b>
+                      </div>
+                    ) : null}
+                  </div>
 
-              <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>Final Schedule Date</div>
-                  <input
-                    type="date"
-                    value={approveDate}
-                    onChange={(e) => setApproveDate(e.target.value)}
-                    disabled={usePreferredDate}
-                    style={{ width: "100%" }}
-                    title={usePreferredDate ? "Turn off 'Use patient appointment date' to change date." : ""}
-                  />
+                  <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                    <input
+                      id="usepref"
+                      type="checkbox"
+                      checked={usePreferredDate}
+                      onChange={(e) => setUsePreferredDate(e.target.checked)}
+                    />
+                    <label htmlFor="usepref" style={{ cursor: "pointer", fontSize: 13, opacity: 0.9 }}>
+                      Use patient appointment date
+                    </label>
+                  </div>
+
+                  <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div style={{ fontSize: 12, opacity: 0.75 }}>Final Schedule Date</div>
+                      <input
+                        type="date"
+                        value={approveDate}
+                        onChange={(e) => setApproveDate(e.target.value)}
+                        disabled={usePreferredDate}
+                        style={{ width: "100%" }}
+                        title={usePreferredDate ? "Turn off 'Use patient appointment date' to change date." : ""}
+                      />
+                    </div>
+
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div style={{ fontSize: 12, opacity: 0.75 }}>Final Schedule Time</div>
+                      <input
+                        type="time"
+                        value={approveTime}
+                        onChange={(e) => setApproveTime(e.target.value)}
+                        min="07:00"
+                        max="15:00"
+                        step="1800"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7, lineHeight: 1.4 }}>
+                    Clinic hours: Monday–Saturday <b>7:00 AM – 3:00 PM</b>. Sunday is closed.
+                  </div>
+
+                  {availabilityMsg ? <div style={{ marginTop: 10, fontSize: 13 }}>{availabilityMsg}</div> : null}
+                  {availabilityLoading ? (
+                    <div style={{ marginTop: 10, fontSize: 13, opacity: 0.85 }}>Loading availability…</div>
+                  ) : null}
                 </div>
 
-                <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>Final Schedule Time</div>
-                  <input
-                    type="time"
-                    value={approveTime}
-                    onChange={(e) => setApproveTime(e.target.value)}
-                    min="07:00"
-                    max="15:00"
-                    step="1800"
-                    style={{ width: "100%" }}
+                {/* Right */}
+                <div style={{ display: "grid", gap: 12 }}>
+                  <AvailabilityCalendar
+                    monthCursor={monthCursor}
+                    onMonthChange={setMonthCursor}
+                    selectedDateKey={approveDate}
+                    onSelectDateKey={(key) => {
+                      if (!usePreferredDate) setApproveDate(key);
+                    }}
+                    bookedMap={bookedMap}
                   />
+
+                  <div className="card" style={{ padding: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                      <div style={{ fontWeight: 800 }}>
+                        Availability for <span style={{ opacity: 0.85 }}>{approveDate || "—"}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>Booked times</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {selectedBookedTimes.length === 0 ? (
+                            <span style={{ opacity: 0.7, fontSize: 13 }}>None</span>
+                          ) : (
+                            selectedBookedTimes.map((t) => (
+                              <span
+                                key={t}
+                                style={{
+                                  fontSize: 12,
+                                  padding: "4px 10px",
+                                  borderRadius: 999,
+                                  border: "1px solid rgba(148,163,184,0.25)",
+                                  background: "rgba(148,163,184,0.14)",
+                                }}
+                              >
+                                {t}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>Suggested available times</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 140, overflow: "auto" }}>
+                          {suggestedFreeTimes.length === 0 ? (
+                            <span style={{ opacity: 0.7, fontSize: 13 }}>No slots found</span>
+                          ) : (
+                            suggestedFreeTimes.slice(0, 20).map((t) => (
+                              <button
+                                key={t}
+                                className="btn"
+                                onClick={() => setApproveTime(t)}
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: 999,
+                                  opacity: approveTime === t ? 1 : 0.85,
+                                }}
+                                title="Click to set time"
+                              >
+                                {t}
+                              </button>
+                            ))
+                          )}
+                        </div>
+
+                        <div style={{ marginTop: 8, fontSize: 12, opacity: 0.65 }}>Showing up to 20 suggestions.</div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7 }}>
+                      Final schedule will be saved as <b>scheduled_at</b> and used by downstream steps.
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
+          </Modal>
 
-              <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7, lineHeight: 1.4 }}>
-                Clinic hours: Monday–Saturday <b>7:00 AM – 3:00 PM</b>. Sunday is closed.
+          {/* ===================== REJECT MODAL ===================== */}
+          <Modal
+            open={rejectOpen}
+            title="Reject Appointment"
+            onClose={closeRejectModal}
+            width="min(560px, 96vw)"
+            footer={
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                <button className="btn" onClick={closeRejectModal}>
+                  Cancel
+                </button>
+                <button className="btn btn-reject" onClick={confirmRejectFromModal}>
+                  Reject
+                </button>
               </div>
-
-              {availabilityMsg ? <div style={{ marginTop: 10, fontSize: 13 }}>{availabilityMsg}</div> : null}
-              {availabilityLoading ? (
-                <div style={{ marginTop: 10, fontSize: 13, opacity: 0.85 }}>Loading availability…</div>
-              ) : null}
-            </div>
-
-            {/* Right */}
-            <div style={{ display: "grid", gap: 12 }}>
-              <AvailabilityCalendar
-                monthCursor={monthCursor}
-                onMonthChange={setMonthCursor}
-                selectedDateKey={approveDate}
-                onSelectDateKey={(key) => {
-                  if (!usePreferredDate) setApproveDate(key);
-                }}
-                bookedMap={bookedMap}
-              />
-
+            }
+          >
+            {!rejectAppt ? null : (
               <div className="card" style={{ padding: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontWeight: 800 }}>
-                    Availability for <span style={{ opacity: 0.85 }}>{approveDate || "—"}</span>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.6 }}>
                   <div>
-                    <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>Booked times</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {selectedBookedTimes.length === 0 ? (
-                        <span style={{ opacity: 0.7, fontSize: 13 }}>None</span>
-                      ) : (
-                        selectedBookedTimes.map((t) => (
-                          <span
-                            key={t}
-                            style={{
-                              fontSize: 12,
-                              padding: "4px 10px",
-                              borderRadius: 999,
-                              border: "1px solid rgba(148,163,184,0.25)",
-                              background: "rgba(148,163,184,0.14)",
-                            }}
-                          >
-                            {t}
-                          </span>
-                        ))
-                      )}
-                    </div>
+                    Patient: <b>{patientNameFromId(rejectAppt.patient_id)}</b>
                   </div>
-
                   <div>
-                    <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>Suggested available times</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxHeight: 140, overflow: "auto" }}>
-                      {suggestedFreeTimes.length === 0 ? (
-                        <span style={{ opacity: 0.7, fontSize: 13 }}>No slots found</span>
-                      ) : (
-                        suggestedFreeTimes.slice(0, 20).map((t) => (
-                          <button
-                            key={t}
-                            className="btn"
-                            onClick={() => setApproveTime(t)}
-                            style={{
-                              padding: "6px 10px",
-                              borderRadius: 999,
-                              opacity: approveTime === t ? 1 : 0.85,
-                            }}
-                            title="Click to set time"
-                          >
-                            {t}
-                          </button>
-                        ))
-                      )}
-                    </div>
-
-                    <div style={{ marginTop: 8, fontSize: 12, opacity: 0.65 }}>Showing up to 20 suggestions.</div>
+                    Type: <b>{rejectAppt.appointment_type}</b> • Appointment Date:{" "}
+                    <b>{fmtDate(rejectAppt.preferred_date)}</b>
                   </div>
                 </div>
 
-                <div style={{ marginTop: 12, fontSize: 12, opacity: 0.7 }}>
-                  Final schedule will be saved as <b>scheduled_at</b> and used by downstream steps.
+                <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
+                  <div style={{ fontSize: 12, opacity: 0.75 }}>Reason</div>
+
+                  <select value={rejectPreset} onChange={(e) => setRejectPreset(e.target.value)} style={{ width: "100%" }}>
+                    <option>No available slot</option>
+                    <option>Clinic closed / Holiday</option>
+                    <option>Missing requirements / incomplete details</option>
+                    <option>Doctor unavailable</option>
+                    <option>Duplicate booking</option>
+                    <option>Other</option>
+                  </select>
+
+                  {rejectPreset === "Other" && (
+                    <textarea
+                      rows={3}
+                      value={rejectCustom}
+                      onChange={(e) => setRejectCustom(e.target.value)}
+                      placeholder="Type the reason..."
+                      style={{ width: "100%" }}
+                    />
+                  )}
+
+                  {rejectError ? (
+                    <div style={{ marginTop: 6, fontSize: 13, color: "rgba(248,113,113,0.95)" }}>
+                      {rejectError}
+                    </div>
+                  ) : null}
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* ===================== REJECT MODAL ===================== */}
-      <Modal
-        open={rejectOpen}
-        title="Reject Appointment"
-        onClose={closeRejectModal}
-        width="min(560px, 96vw)"
-        footer={
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-            <button className="btn" onClick={closeRejectModal}>
-              Cancel
-            </button>
-            <button className="btn btn-reject" onClick={confirmRejectFromModal}>
-              Reject
-            </button>
-          </div>
-        }
-      >
-        {!rejectAppt ? null : (
-          <div className="card" style={{ padding: 14 }}>
-            <div style={{ fontSize: 13, opacity: 0.9, lineHeight: 1.6 }}>
-              <div>
-                Patient: <b>{patientNameFromId(rejectAppt.patient_id)}</b>
-              </div>
-              <div>
-                Type: <b>{rejectAppt.appointment_type}</b> • Appointment Date: <b>{fmtDate(rejectAppt.preferred_date)}</b>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 12, display: "grid", gap: 6 }}>
-              <div style={{ fontSize: 12, opacity: 0.75 }}>Reason</div>
-
-              <select value={rejectPreset} onChange={(e) => setRejectPreset(e.target.value)} style={{ width: "100%" }}>
-                <option>No available slot</option>
-                <option>Clinic closed / Holiday</option>
-                <option>Missing requirements / incomplete details</option>
-                <option>Doctor unavailable</option>
-                <option>Duplicate booking</option>
-                <option>Other</option>
-              </select>
-
-              {rejectPreset === "Other" && (
-                <textarea
-                  rows={3}
-                  value={rejectCustom}
-                  onChange={(e) => setRejectCustom(e.target.value)}
-                  placeholder="Type the reason..."
-                  style={{ width: "100%" }}
-                />
-              )}
-
-              {rejectError ? (
-                <div style={{ marginTop: 6, fontSize: 13, color: "rgba(248,113,113,0.95)" }}>{rejectError}</div>
-              ) : null}
-            </div>
-          </div>
-        )}
-      </Modal>
+            )}
+          </Modal>
+        </>
+      ) : null}
 
       {/* ===================== PATIENT DETAILS DRAWER ===================== */}
       <Drawer

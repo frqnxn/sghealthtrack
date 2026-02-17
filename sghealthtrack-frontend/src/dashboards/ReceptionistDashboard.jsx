@@ -6,6 +6,7 @@ export default function ReceptionistDashboard({ session }) {
       session={session}
       page="appointments"
       appointmentsBasePath="/receptionist/appointments"
+      approvalsEnabled
     />
   );
 }
