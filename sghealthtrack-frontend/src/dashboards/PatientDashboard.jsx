@@ -732,6 +732,10 @@ function calcCustomTotal(items) {
   return items.reduce((sum, item) => sum + (typeof item.price === "number" ? item.price : 0), 0);
 }
 
+function formatPeso(value) {
+  return `PHP ${Number(value || 0).toLocaleString()}`;
+}
+
 function buildFallbackQrData({ amount, referenceNo, orNumber }) {
   const safeAmount = Number.isFinite(amount) ? amount : 0;
   const ref = referenceNo || "QRPH-REF";
@@ -872,7 +876,6 @@ function FormSlipCard({ appointment, draft, setDraft, saving, onSave, submitted 
     if (draft.package_code) return String(draft.package_code).toUpperCase();
     return Array.isArray(draft.custom_items) && draft.custom_items.length > 0 ? "CUSTOM" : "A";
   });
-  const formatPeso = (value) => `PHP ${Number(value || 0).toLocaleString()}`;
 
   useEffect(() => {
     if (!draft.package_code) return;
