@@ -1362,7 +1362,7 @@ export default function AdminDashboard({
     if (workflow_status === "rejected") {
       if (!rr || !rr.trim()) {
         setMsg("Rejection reason is required.");
-        return;
+        return false;
       }
       rr = rr.trim();
     } else {
@@ -1374,7 +1374,7 @@ export default function AdminDashboard({
       scheduled_at = scheduled_at_override || scheduled_at;
       if (!scheduled_at) {
         setMsg("Schedule is required to approve.");
-        return;
+        return false;
       }
     }
 
@@ -1396,7 +1396,7 @@ export default function AdminDashboard({
 
     if (error) {
       setMsg(`Failed to update appointment: ${error.message}`);
-      return;
+      return false;
     }
 
     if (workflow_status === "rejected") {
@@ -1419,6 +1419,7 @@ export default function AdminDashboard({
     loadPatients();
 
     setMsg(`Updated appointment to "${formatWorkflowLabel(workflow_status)}".`);
+    return true;
   }
 
   async function confirmApproveFromModal() {
@@ -1464,8 +1465,8 @@ export default function AdminDashboard({
         }
       : {};
 
-    await setWorkflowStatus(approveAppt, "approved", null, scheduledISO, assignPayload);
-    if (allowReceptionistActions) {
+    const ok = await setWorkflowStatus(approveAppt, "approved", null, scheduledISO, assignPayload);
+    if (ok && allowReceptionistActions) {
       setAppointments((prev) => prev.filter((x) => x.id !== approveAppt.id));
     }
     closeApproveModal();
