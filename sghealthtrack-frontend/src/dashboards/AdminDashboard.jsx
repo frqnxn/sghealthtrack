@@ -1465,6 +1465,9 @@ export default function AdminDashboard({
       : {};
 
     await setWorkflowStatus(approveAppt, "approved", null, scheduledISO, assignPayload);
+    if (allowReceptionistActions) {
+      setAppointments((prev) => prev.filter((x) => x.id !== approveAppt.id));
+    }
     closeApproveModal();
   }
 
@@ -1692,6 +1695,9 @@ export default function AdminDashboard({
     list = list.filter((a) => (a.rejection_reason || "").toLowerCase() !== "no show");
     // Hide rejected/canceled appointments from the admin list
     list = list.filter((a) => !["rejected", "canceled"].includes(statusKey(a)));
+    if (allowReceptionistActions) {
+      list = list.filter((a) => statusKey(a) !== "approved");
+    }
 
     if (filter === "inbox") {
       list = list.filter((a) => statusKey(a) === "pending");
