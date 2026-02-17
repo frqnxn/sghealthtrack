@@ -2162,7 +2162,8 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   }
 
   async function loadMedicalProcessFromLatestApproved(appts) {
-    const getByStatus = (status) => (appts || []).find((x) => statusKey(x) === status);
+    const candidates = (appts || []).filter((a) => !isReleasedByStatus(a?.status));
+    const getByStatus = (status) => candidates.find((x) => statusKey(x) === status);
     const ready =
       getByStatus("arrived") ||
       getByStatus("ready_for_triage") ||
