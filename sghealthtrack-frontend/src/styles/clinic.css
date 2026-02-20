@@ -878,6 +878,27 @@ body {
   cursor: pointer;
 }
 
+.auth-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #0f766e;
+  text-decoration: underline;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.auth-link:hover {
+  color: #0b5b55;
+}
+
+.auth-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .auth-outline-btn {
   background: #ffffff;
   border: 1px solid #e2e8f0;
