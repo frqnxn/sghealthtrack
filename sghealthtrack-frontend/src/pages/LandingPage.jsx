@@ -12,13 +12,11 @@ export default function LandingPage() {
   const [privacyChecked, setPrivacyChecked] = useState(false);
 
   useEffect(() => {
-    const acknowledged = localStorage.getItem("sghealthtrack_privacy_ack") === "true";
-    setShowPrivacy(!acknowledged);
+    setShowPrivacy(true);
     setPrivacyChecked(false);
   }, []);
 
   function acceptPrivacy() {
-    localStorage.setItem("sghealthtrack_privacy_ack", "true");
     setShowPrivacy(false);
   }
 
