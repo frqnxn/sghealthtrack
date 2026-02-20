@@ -1030,8 +1030,8 @@ body {
 }
 
 .dashboard-utility {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(40px, max-content) 1fr max-content;
   gap: 16px;
   align-items: center;
   height: var(--topbar-height);
@@ -1051,6 +1051,8 @@ body {
   gap: 12px;
   min-width: 40px;
   height: 100%;
+  grid-column: 1;
+  justify-self: start;
 }
 
 .dashboard-utility-right {
@@ -1059,7 +1061,9 @@ body {
   gap: 12px;
   justify-content: flex-end;
   height: 100%;
-  min-width: 0;
+  min-width: max-content;
+  grid-column: 3;
+  justify-self: end;
 }
 
 .dashboard-utility-right > * {
@@ -1087,7 +1091,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  height: 100%;
+  height: auto;
 }
 
 .dashboard-user {
@@ -3121,6 +3125,7 @@ body {
   }
 
   .dashboard-utility {
+    grid-template-columns: minmax(40px, max-content) 1fr max-content;
     gap: 10px;
     align-items: center;
   }
@@ -3133,7 +3138,6 @@ body {
   }
 
   .dashboard-utility-left {
-    flex: 1;
     min-width: 0;
     align-items: center;
   }
