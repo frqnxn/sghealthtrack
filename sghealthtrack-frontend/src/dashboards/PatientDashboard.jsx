@@ -1302,6 +1302,10 @@ function isReleasedBySteps(stepsRow) {
 function canDownloadReport(stepsRow) {
   return String(stepsRow?.release_status || "").toLowerCase() === "completed";
 }
+function isOnlinePaymentMethod(method) {
+  const value = String(method || "").toLowerCase();
+  return value.includes("online") || value.includes("qr");
+}
 
 
 export default function PatientDashboard({ session, page = "dashboard" }) {
@@ -1486,13 +1490,26 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
   }, [stepsRow]);
 
   const paymentSummary = useMemo(() => {
+    const cancelledApptIds = new Set(
+      appointments
+        .filter((a) => isNonBlockingStatus(a?.status))
+        .map((a) => a?.id)
+        .filter(Boolean)
+    );
+    const refundableCredit = payments.reduce((sum, p) => {
+      const status = String(p?.payment_status || "").toLowerCase();
+      if (status !== "completed") return sum;
+      if (!cancelledApptIds.has(p?.appointment_id)) return sum;
+      if (!isOnlinePaymentMethod(p?.payment_method)) return sum;
+      return sum + (Number(p?.amount) || 0);
+    }, 0);
     const totalPaid = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     return {
       totalPaid,
       last: payments[0] || null,
-      outstanding: 0,
+      refundableCredit,
     };
-  }, [payments]);
+  }, [appointments, payments]);
 
   const labSummaryItems = useMemo(() => {
     if (!latestLabSummary) return [];
@@ -3470,8 +3487,8 @@ async function upsertFormSlipForAppointment(appointmentId) {
                       </div>
                     </div>
                     <div className="payment-row">
-                      <span>Outstanding Balance</span>
-                      <strong>{paymentSummary.outstanding.toFixed(2)}</strong>
+                      <span>Refundable Credit (Online Cancellations)</span>
+                      <strong>{paymentSummary.refundableCredit.toFixed(2)}</strong>
                     </div>
                   </div>
                 ) : (
@@ -4148,10 +4165,10 @@ async function upsertFormSlipForAppointment(appointmentId) {
           <>
             <div className="summary-grid summary-grid-3">
               <div className="summary-card">
-                <div className="summary-icon">OB</div>
+                <div className="summary-icon">RC</div>
                 <div>
-                  <div className="summary-label">Outstanding Balance</div>
-                  <div className="summary-value">{paymentSummary.outstanding.toFixed(2)}</div>
+                  <div className="summary-label">Refundable Credit</div>
+                  <div className="summary-value">{paymentSummary.refundableCredit.toFixed(2)}</div>
                 </div>
               </div>
               <div className="summary-card">
