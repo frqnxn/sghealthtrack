@@ -214,12 +214,6 @@ export default function DashboardLayout({ session, role, onLogout }) {
               >
                 ☰
               </button>
-              <input
-                type="search"
-                className="dashboard-search"
-                placeholder="Search…"
-                aria-label="Search"
-              />
             </div>
             <div className="dashboard-utility-right">
               <div id="dashboard-utility-actions" />
