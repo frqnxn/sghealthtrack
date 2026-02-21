@@ -483,7 +483,8 @@ export default function NurseDashboard({ session }) {
     const token = session?.access_token;
 
     // Primary path: backend endpoint (service-role update for steps + notification).
-    if (token) {
+    // Only use it when API base URL is configured and endpoint returns a valid JSON { ok: true } payload.
+    if (token && API_BASE) {
       const response = await fetch(`${API_BASE}/api/staff/nurse/vitals`, {
         method: "POST",
         headers: {
@@ -492,8 +493,14 @@ export default function NurseDashboard({ session }) {
         },
         body: JSON.stringify(payload),
       });
-      const result = await response.json().catch(() => ({}));
-      if (response.ok) {
+      let result = null;
+      try {
+        result = await response.json();
+      } catch {
+        result = null;
+      }
+
+      if (response.ok && result?.ok) {
         saved = true;
       } else {
         setMsg(result?.error || "Backend save failed, trying direct save...");
