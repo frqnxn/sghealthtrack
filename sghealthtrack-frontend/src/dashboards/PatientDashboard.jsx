@@ -1306,6 +1306,15 @@ function isOnlinePaymentMethod(method) {
   const value = String(method || "").toLowerCase();
   return value.includes("online") || value.includes("qr");
 }
+function pickLatestStepRow(rows = []) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return [...rows]
+    .sort((a, b) => {
+      const aTime = new Date(a?.updated_at || a?.done_at || 0).getTime();
+      const bTime = new Date(b?.updated_at || b?.done_at || 0).getTime();
+      return bTime - aTime;
+    })[0] || null;
+}
 
 
 export default function PatientDashboard({ session, page = "dashboard" }) {
@@ -2270,11 +2279,15 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
     }
 
     // Otherwise check steps.release_status (if row exists)
-    const steps = await supabase
+    const stepsQuery = await supabase
       .from("appointment_steps")
-      .select("appointment_id, release_status")
-      .eq("appointment_id", latest.id)
-      .maybeSingle();
+      .select("appointment_id, release_status, updated_at, done_at")
+      .eq("appointment_id", latest.id);
+
+    const steps = {
+      error: stepsQuery.error,
+      data: pickLatestStepRow(stepsQuery.data || []),
+    };
 
     if (steps.error) {
       // If we cannot read steps (RLS), be safe and lock
@@ -2321,11 +2334,15 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
     setActiveApprovedAppt(ready);
 
-    let steps = await supabase
+    let stepsQuery = await supabase
       .from("appointment_steps")
       .select("*")
-      .eq("appointment_id", ready.id)
-      .maybeSingle();
+      .eq("appointment_id", ready.id);
+
+    let steps = {
+      error: stepsQuery.error,
+      data: pickLatestStepRow(stepsQuery.data || []),
+    };
 
     let req = await supabase
       .from("appointment_requirements")
@@ -2338,11 +2355,14 @@ export default function PatientDashboard({ session, page = "dashboard" }) {
 
     if (!steps.error && !steps.data) {
       await ensureAppointmentSteps(ready.id);
-      steps = await supabase
+      stepsQuery = await supabase
         .from("appointment_steps")
         .select("*")
-        .eq("appointment_id", ready.id)
-        .maybeSingle();
+        .eq("appointment_id", ready.id);
+      steps = {
+        error: stepsQuery.error,
+        data: pickLatestStepRow(stepsQuery.data || []),
+      };
     }
 
     if (!req.error && !req.data) {

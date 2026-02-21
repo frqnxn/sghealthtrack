@@ -355,8 +355,15 @@ export default function LabDashboard({ session, page = "queue" }) {
     return;
   }
 
+  const latestByAppointment = new Map();
+  (data || []).forEach((r) => {
+    const key = r?.appointment_id;
+    if (!key || latestByAppointment.has(key)) return;
+    latestByAppointment.set(key, r);
+  });
+
   const rows =
-    (data || [])
+    Array.from(latestByAppointment.values())
       .map((r) => {
         const appt = r.appointments;
         if (!appt?.id) return null;

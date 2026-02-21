@@ -143,6 +143,7 @@ export default function NurseDashboard({ session }) {
         appointment_id,
         payment_status,
         triage_status,
+        updated_at,
         appointments:appointment_id (
           id,
           patient_id,
@@ -153,9 +154,7 @@ export default function NurseDashboard({ session }) {
         )
       `
       )
-      .eq("payment_status", "completed")
-      .neq("triage_status", "completed")
-      .order("updated_at", { ascending: true });
+      .order("updated_at", { ascending: false });
 
     if (error) {
       setQueue([]);
@@ -163,8 +162,15 @@ export default function NurseDashboard({ session }) {
       return setMsg(`Failed to load paid queue: ${error.message}`);
     }
 
-  const rows =
-      (data || [])
+    const latestByAppointment = new Map();
+    (data || []).forEach((r) => {
+      const key = r?.appointment_id;
+      if (!key || latestByAppointment.has(key)) return;
+      latestByAppointment.set(key, r);
+    });
+
+    const rows =
+      Array.from(latestByAppointment.values())
         .map((r) => {
           const appt = r.appointments;
           if (!appt?.id) return null;
@@ -177,12 +183,15 @@ export default function NurseDashboard({ session }) {
             status: appt.status,
             payment_status: r.payment_status,
             triage_status: r.triage_status,
+            updated_at: r.updated_at,
           };
         })
         .filter((row) => {
           if (!row) return false;
           const s = String(row.status || "").toLowerCase();
-          return s !== "rejected" && s !== "cancelled" && s !== "canceled";
+          const paymentStatus = String(row.payment_status || "").toLowerCase();
+          const triageStatus = String(row.triage_status || "").toLowerCase();
+          return s !== "rejected" && s !== "cancelled" && s !== "canceled" && paymentStatus === "completed" && triageStatus !== "completed";
         }) || [];
 
     setQueue(rows);
