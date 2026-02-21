@@ -348,8 +348,6 @@ export default function CashierDashboard({ session, page = "payments" }) {
         )
       `
       )
-      // ✅ Cashier should only see arrived appointments waiting for payment
-      .eq("appointments.workflow_status", "arrived")
       .order("updated_at", { ascending: false });
 
     if (error) {
@@ -358,12 +356,19 @@ export default function CashierDashboard({ session, page = "payments" }) {
       return setMsg(`Cannot load submitted Form Slips: ${error.message}`);
     }
 
-    const list = (data || []).map((r) => ({
-      ...r,
-      appointment: r.appointments,
-      appointment_id: r.appointments?.id || r.appointment_id,
-      patient_id: r.appointments?.patient_id || r.patient_id,
-    }));
+    const allowedFlow = new Set(["approved", "arrived", "awaiting_forms", "ready_for_triage"]);
+    const list = (data || [])
+      .map((r) => ({
+        ...r,
+        appointment: r.appointments,
+        appointment_id: r.appointments?.id || r.appointment_id,
+        patient_id: r.appointments?.patient_id || r.patient_id,
+      }))
+      .filter((r) => {
+        const ws = String(r?.appointment?.workflow_status || "").toLowerCase();
+        const legacy = String(r?.appointment?.status || "").toLowerCase();
+        return allowedFlow.has(ws) || legacy === "approved";
+      });
 
     setRows(list);
     setLoading(false);
