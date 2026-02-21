@@ -470,18 +470,58 @@ export default function NurseDashboard({ session }) {
       temperature_c: tempVal,
     };
 
+    let saved = false;
     const token = session?.access_token;
-    if (!token) return setMsg("Session expired. Please login again.");
-    const response = await fetch(`${API_BASE}/api/staff/nurse/vitals`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) return setMsg(result?.error || "Failed to save vitals.");
+
+    // Primary path: backend endpoint (service-role update for steps + notification).
+    if (token) {
+      const response = await fetch(`${API_BASE}/api/staff/nurse/vitals`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok) {
+        saved = true;
+      } else {
+        setMsg(result?.error || "Backend save failed, trying direct save...");
+      }
+    }
+
+    // Fallback path: direct Supabase save (for environments where backend route is not yet deployed).
+    if (!saved) {
+      const nowIso = new Date().toISOString();
+      const { error: vitErr } = await supabase.from("vitals").insert({
+        ...payload,
+        recorded_by: nurseId,
+        recorded_at: nowIso,
+      });
+      if (vitErr) return setMsg(`Failed to save vitals: ${vitErr.message}`);
+
+      const { error: stepErr } = await supabase
+        .from("appointment_steps")
+        .upsert(
+          {
+            appointment_id: selected.appointment_id,
+            patient_id: selected.patient_id,
+            registration_status: stepsRow?.registration_status || "completed",
+            payment_status: stepsRow?.payment_status || "completed",
+            triage_status: "completed",
+            lab_status: stepsRow?.lab_status || "pending",
+            xray_status: stepsRow?.xray_status || "pending",
+            doctor_status: stepsRow?.doctor_status || "pending",
+            release_status: stepsRow?.release_status || "pending",
+            updated_at: nowIso,
+            done_by: nurseId,
+            done_at: nowIso,
+          },
+          { onConflict: "appointment_id" }
+        );
+      if (stepErr) return setMsg(`Vitals saved but failed to update progress: ${stepErr.message}`);
+    }
 
     setMsg("Vitals saved ✅ Patient removed from queue ✅");
 
