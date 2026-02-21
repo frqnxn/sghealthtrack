@@ -334,20 +334,19 @@ export default function LabDashboard({ session, page = "queue" }) {
       triage_status,
       lab_status,
       done_at,
+      updated_at,
       appointments:appointment_id (
         id,
         patient_id,
         appointment_type,
         preferred_date,
+        workflow_status,
         status,
         created_at
       )
     `
     )
-    .eq("payment_status", "completed")
-    .eq("triage_status", "completed")
-    .neq("lab_status", "completed")
-    .order("done_at", { ascending: true, nullsFirst: false }); // FIFO based on nurse completion time
+    .order("updated_at", { ascending: true, nullsFirst: false }); // FIFO from latest step updates
 
   if (error) {
     setMsg("Failed to load lab queue: " + error.message);
@@ -366,8 +365,11 @@ export default function LabDashboard({ session, page = "queue" }) {
           patient_id: appt.patient_id,
           appointment_type: appt.appointment_type,
           preferred_date: appt.preferred_date,
+          workflow_status: appt.workflow_status,
           status: appt.status,
           created_at: appt.created_at,
+          payment_status: r.payment_status,
+          triage_status: r.triage_status,
           // extra: useful to display
           triage_done_at: r.done_at,
           lab_status: r.lab_status,
@@ -375,8 +377,22 @@ export default function LabDashboard({ session, page = "queue" }) {
       })
       .filter((row) => {
         if (!row) return false;
-        const s = String(row.status || "").toLowerCase();
-        return s !== "rejected" && s !== "cancelled" && s !== "canceled";
+        const paymentStatus = String(row.payment_status || "").toLowerCase();
+        const triageStatus = String(row.triage_status || "").toLowerCase();
+        const labStatus = String(row.lab_status || "").toLowerCase();
+        const workflowStatus = String(row.workflow_status || "").toLowerCase();
+        const status = String(row.status || "").toLowerCase();
+
+        const notCanceled = !["rejected", "cancelled", "canceled"].includes(status);
+        const inFlow = ["approved", "arrived", "awaiting_forms", "ready_for_triage", "in_progress"].includes(workflowStatus) || status === "approved" || status === "in_progress";
+
+        return (
+          notCanceled &&
+          inFlow &&
+          paymentStatus === "completed" &&
+          triageStatus === "completed" &&
+          labStatus !== "completed"
+        );
       }) || [];
 
   setAppointments(rows);
