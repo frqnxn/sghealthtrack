@@ -82,6 +82,28 @@ async function requireAdmin(req, res, next) {
   }
 }
 
+function requireRole(allowedRoles = []) {
+  return async function roleMiddleware(req, res, next) {
+    try {
+      const { data, error } = await supabaseService
+        .from("profiles")
+        .select("role")
+        .eq("id", req.user.id)
+        .maybeSingle();
+
+      if (error) return res.status(500).json({ error: error.message });
+      if (!data?.role || !allowedRoles.includes(data.role)) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      req.role = data.role;
+      next();
+    } catch (err) {
+      return res.status(500).json({ error: "Role check failed" });
+    }
+  };
+}
+
 function buildMockQrSvg({ amount, reference, orNumber }) {
   const safeAmount = Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
   const safeRef = String(reference || "").slice(0, 32);
@@ -389,6 +411,99 @@ app.get("/api/staff/appointments", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to load staff appointments" });
   }
 });
+
+app.post(
+  "/api/staff/nurse/vitals",
+  requireAuth,
+  requireRole(["nurse", "admin"]),
+  async (req, res) => {
+    try {
+      const appointmentId = String(req.body?.appointment_id || "").trim();
+      const patientId = String(req.body?.patient_id || "").trim();
+      const nowIso = new Date().toISOString();
+
+      const height = Number(req.body?.height_cm);
+      const weight = Number(req.body?.weight_kg);
+      const systolic = Number(req.body?.systolic);
+      const diastolic = Number(req.body?.diastolic);
+      const heartRate = Number(req.body?.heart_rate);
+      const tempC = Number(req.body?.temperature_c);
+
+      if (!appointmentId || !patientId) {
+        return res.status(400).json({ error: "appointment_id and patient_id are required" });
+      }
+      if (
+        !Number.isFinite(height) ||
+        !Number.isFinite(weight) ||
+        !Number.isFinite(systolic) ||
+        !Number.isFinite(diastolic) ||
+        !Number.isFinite(heartRate) ||
+        !Number.isFinite(tempC)
+      ) {
+        return res.status(400).json({ error: "All vital values must be numeric" });
+      }
+
+      const { data: stepRow, error: stepReadErr } = await supabaseService
+        .from("appointment_steps")
+        .select("*")
+        .eq("appointment_id", appointmentId)
+        .maybeSingle();
+      if (stepReadErr) return res.status(400).json({ error: stepReadErr.message });
+      if (!stepRow) return res.status(400).json({ error: "Appointment steps not found" });
+
+      const paidNow = String(stepRow.payment_status || "").toLowerCase() === "completed";
+      if (!paidNow) return res.status(400).json({ error: "Payment must be completed before vitals" });
+
+      const { data: vitalsRow, error: vitalsErr } = await supabaseService
+        .from("vitals")
+        .insert([
+          {
+            appointment_id: appointmentId,
+            patient_id: patientId,
+            recorded_by: req.user.id,
+            height_cm: height,
+            weight_kg: weight,
+            systolic,
+            diastolic,
+            heart_rate: heartRate,
+            temperature_c: tempC,
+          },
+        ])
+        .select("*")
+        .maybeSingle();
+      if (vitalsErr) return res.status(400).json({ error: vitalsErr.message });
+
+      const { data: updatedSteps, error: stepWriteErr } = await supabaseService
+        .from("appointment_steps")
+        .update({
+          registration_status: stepRow.registration_status || "completed",
+          triage_status: "completed",
+          lab_status: stepRow.lab_status || "pending",
+          xray_status: stepRow.xray_status || "pending",
+          updated_at: nowIso,
+          done_by: req.user.id,
+          done_at: nowIso,
+        })
+        .eq("appointment_id", appointmentId)
+        .select("*")
+        .maybeSingle();
+      if (stepWriteErr) return res.status(400).json({ error: stepWriteErr.message });
+
+      await supabaseService.from("notifications").insert({
+        patient_id: patientId,
+        title: "Vitals completed",
+        body: "Your vital signs were recorded. Please proceed to the next step (Lab/X-ray) if required.",
+        created_at: nowIso,
+        is_read: false,
+        read_at: null,
+      });
+
+      return res.json({ ok: true, vitals: vitalsRow, steps: updatedSteps });
+    } catch (err) {
+      return res.status(500).json({ error: err.message || "Failed to save vitals" });
+    }
+  }
+);
 
 // =====================================================
 // ADMIN ENDPOINTS

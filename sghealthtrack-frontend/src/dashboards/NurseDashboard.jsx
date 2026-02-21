@@ -31,6 +31,7 @@ function SectionTitle({ title, subtitle }) {
 
 export default function NurseDashboard({ session }) {
   const nurseId = session?.user?.id;
+  const API_BASE = import.meta.env.VITE_API_URL || "";
 
   const [msg, setMsg] = useState("");
   const { showToast } = useToast();
@@ -425,20 +426,6 @@ export default function NurseDashboard({ session }) {
     await loadTriage(row);
   }
 
-  async function notifyPatient(patientId, title, body) {
-    if (!patientId) return;
-    try {
-      await supabase.from("notifications").insert({
-        patient_id: patientId,
-        title,
-        body,
-        created_at: new Date().toISOString(),
-        is_read: false,
-        read_at: null,
-      });
-    } catch (_e) {}
-  }
-
   async function saveVitals() {
     if (!selected?.appointment_id) return;
 
@@ -475,7 +462,6 @@ export default function NurseDashboard({ session }) {
     const payload = {
       appointment_id: selected.appointment_id,
       patient_id: selected.patient_id,
-      recorded_by: nurseId,
       height_cm: heightVal,
       weight_kg: weightVal,
       systolic: sysVal,
@@ -484,34 +470,18 @@ export default function NurseDashboard({ session }) {
       temperature_c: tempVal,
     };
 
-    const { error: vitErr } = await supabase.from("vitals").insert(payload);
-    if (vitErr) return setMsg(vitErr.message);
-
-    const nowIso = new Date().toISOString();
-    const { error: stepErr } = await supabase
-      .from("appointment_steps")
-      .upsert(
-        {
-          appointment_id: selected.appointment_id,
-          patient_id: selected.patient_id,
-          triage_status: "completed",
-          // ensure lab/xray statuses are not left null so queues can pick them up
-          lab_status: stepsRow?.lab_status || "pending",
-          xray_status: stepsRow?.xray_status || "pending",
-          updated_at: nowIso,
-          done_by: nurseId,
-          done_at: nowIso,
-        },
-        { onConflict: "appointment_id" }
-      );
-
-    if (stepErr) return setMsg(`Vitals saved but failed to update steps: ${stepErr.message}`);
-
-    await notifyPatient(
-      selected.patient_id,
-      "Vitals completed",
-      "Your vital signs were recorded. Please proceed to the next step (Lab/X-ray) if required."
-    );
+    const token = session?.access_token;
+    if (!token) return setMsg("Session expired. Please login again.");
+    const response = await fetch(`${API_BASE}/api/staff/nurse/vitals`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) return setMsg(result?.error || "Failed to save vitals.");
 
     setMsg("Vitals saved ✅ Patient removed from queue ✅");
 
